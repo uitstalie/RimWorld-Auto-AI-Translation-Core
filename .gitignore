@@ -427,3 +427,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# 本地（Linux）编译探针：保留在机器上，不入库
+# 用途：net48 + Microsoft.NETFramework.ReferenceAssemblies，直接引用游戏
+#      RimWorldLinux_Data/Managed/*.dll 与 pack 内的 0Harmony/Newtonsoft.Json，
+#      供 dotnet 在没有 MSBuild 的 Linux 上验证能否编译（内部是本机绝对路径）。
+.verify-build/
