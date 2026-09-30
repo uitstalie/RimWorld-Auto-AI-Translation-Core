@@ -151,6 +151,16 @@ namespace AutoTranslator_Core
                                     ? obj["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString()
                                     : obj["choices"]?[0]?["message"]?["content"]?.ToString();
 
+                string finishReason = expectsGoogleFormat
+                                    ? obj["candidates"]?[0]?["finishReason"]?.ToString()
+                                    : obj["choices"]?[0]?["finish_reason"]?.ToString();
+
+                if (!string.IsNullOrEmpty(finishReason) &&
+                    (finishReason.IndexOf("length", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     finishReason.IndexOf("max_tokens", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    Log.Warning($"[AutoTranslationCore] AI 回應被輸出上限截斷 (finish_reason={finishReason})。已提高 max_tokens 預算，準備重試...");
+                }
 
                 if (string.IsNullOrWhiteSpace(raw))
                 {

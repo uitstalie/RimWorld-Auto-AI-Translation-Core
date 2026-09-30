@@ -197,9 +197,21 @@ namespace AutoTranslator_Core
                 {
                     url = $"{baseUrl}/chat/completions";
                     bool isReasoningModel = IsReasoningModel(model);
-                    int safeMaxTokens = 4096;
 
-                    if (isReasoningModel || targetConfig.Provider == TranslatorProvider.Custom_OpenAI || targetConfig.Provider == TranslatorProvider.DeepSeek)
+                    // EN: Scale the output budget with the batch size. A fixed 4096 is too small
+                    // once a provider burns tokens on hidden reasoning before the JSON answer,
+                    // which truncates the array and surfaces as "invalid format" errors.
+                    int totalInputChars = texts.Sum(t => t?.Length ?? 0);
+                    int safeMaxTokens = Math.Max(4096, Math.Min(16384, totalInputChars * 2 + 1024));
+
+                    if (targetConfig.Provider == TranslatorProvider.DeepSeek)
+                    {
+                        // EN: DeepSeek enables thinking mode by default (effort=high) and reasoning
+                        // tokens count against max_tokens. Translation does not need chain-of-thought,
+                        // so disable it explicitly to keep the JSON answer from being truncated.
+                        payload = new { model = string.IsNullOrEmpty(model) ? "local-model" : model, messages = new[] { new { role = "system", content = prompt }, new { role = "user", content = inputJson } }, max_tokens = safeMaxTokens, thinking = new { type = "disabled" } };
+                    }
+                    else if (isReasoningModel || targetConfig.Provider == TranslatorProvider.Custom_OpenAI)
                     {
                         payload = new { model = string.IsNullOrEmpty(model) ? "local-model" : model, messages = new[] { new { role = "system", content = prompt }, new { role = "user", content = inputJson } }, max_tokens = safeMaxTokens };
                     }
@@ -220,7 +232,12 @@ namespace AutoTranslator_Core
                 if (reasoningModel) customTimeout = 300;
                 customTimeout = Math.Max(customTimeout, profile.TimeoutFloorSeconds);
 
-                for (int attempt = 0; attempt <= maxRetries; attempt++)
+                // EN: Format retries get their own attempt budget on top of network retries.
+                // Previously both shared one counter, so reasoning models (maxRetries = 0)
+                // could never retry a malformed response at all.
+                int totalAttempts = maxRetries + maxFormatRetries;
+
+                for (int attempt = 0; attempt <= totalAttempts; attempt++)
                 {
                     if (AutoTranslatorSettings.IsCancellationRequested) return null;
 
@@ -348,7 +365,7 @@ namespace AutoTranslator_Core
                             return parsed;
                         }
 
-                        if (formatRetryCount < maxFormatRetries && attempt < maxRetries)
+                        if (formatRetryCount < maxFormatRetries)
                         {
                             hadFormatRetry = true;
                             formatRetryCount++;
