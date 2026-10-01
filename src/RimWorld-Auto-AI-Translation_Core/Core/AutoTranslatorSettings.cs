@@ -20,7 +20,7 @@ namespace AutoTranslator_Core
     {
         // 這個欄位保存 目標語言 的執行狀態或快取資料。
         // EN: This field stores target language runtime state or cached data.
-        public TargetLanguage TargetLang = TargetLanguage.Traditional;
+        public TargetLanguage TargetLang = TargetLanguage.Simplified;
         // 這個欄位保存 HasManual目標語言 的執行狀態或快取資料。
         // EN: This field stores has manual target language runtime state or cached data.
         public bool HasManualTargetLanguage = false;
@@ -168,7 +168,7 @@ namespace AutoTranslator_Core
         public string CloudBatchUploadLog = "";
         // 這個欄位保存 雲端目標語言 的執行狀態或快取資料。
         // EN: This field stores cloud target language runtime state or cached data.
-        public TargetLanguage CloudTargetLang = TargetLanguage.Traditional;
+        public TargetLanguage CloudTargetLang = TargetLanguage.Simplified;
 
         [NonSerialized] public static Dictionary<string, CloudModRecord> SelectedCloudVersion = new Dictionary<string, CloudModRecord>(StringComparer.OrdinalIgnoreCase);
 
@@ -389,7 +389,7 @@ namespace AutoTranslator_Core
         public override void ExposeData()
         {
             base.ExposeData();
-            Scribe_Values.Look(ref TargetLang, "TargetLang", TargetLanguage.Traditional);
+            Scribe_Values.Look(ref TargetLang, "TargetLang", TargetLanguage.Simplified);
             Scribe_Values.Look(ref HasManualTargetLanguage, "HasManualTargetLanguage", false);
             Scribe_Values.Look(ref OnlyScanActiveMods, "OnlyScanActiveMods", true);
             Scribe_Values.Look(ref EnableUIInterceptor, "EnableUIInterceptor", false);
@@ -418,7 +418,7 @@ namespace AutoTranslator_Core
             Scribe_Values.Look(ref CloudAdminToken, "CloudAdminToken", "");
             Scribe_Values.Look(ref CloudUploadType, "CloudUploadType", "AI_Auto");
             Scribe_Values.Look(ref CloudBatchUploadLog, "CloudBatchUploadLog", "");
-            Scribe_Values.Look(ref CloudTargetLang, "CloudTargetLang", TargetLanguage.Traditional);
+            Scribe_Values.Look(ref CloudTargetLang, "CloudTargetLang", TargetLanguage.Simplified);
 
             Scribe_Values.Look(ref HasAcceptedExportEula, "HasAcceptedExportEula", false);
             Scribe_Values.Look(ref EulaAcceptedTimestamp, "EulaAcceptedTimestamp", "");

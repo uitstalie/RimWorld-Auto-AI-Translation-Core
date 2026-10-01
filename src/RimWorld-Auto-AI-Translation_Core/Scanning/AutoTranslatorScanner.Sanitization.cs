@@ -73,6 +73,12 @@ namespace AutoTranslator_Core
             translated = RestoreUntranslatableGrammarRule(translated, original);
             translated = LanguageDetector.NormalizeChineseVariant(translated, AutoTranslatorMod.Settings.TargetLang);
 
+            if (LanguageDetector.HasForeignScriptResidue(translated, AutoTranslatorMod.Settings.TargetLang))
+            {
+                AddValidationStat(s => s.EnglishResidualFallback++);
+                return null;   // 视为翻译失败（调用方会重试/AI 重译）
+            }
+
             if (LanguageDetector.LooksLikePlaceholderTranslation(translated, AutoTranslatorMod.Settings.TargetLang))
             {
                 return null;

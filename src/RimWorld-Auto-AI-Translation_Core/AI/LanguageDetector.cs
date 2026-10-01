@@ -68,6 +68,31 @@ namespace AutoTranslator_Core
             return result == null ? text : result.ToString();
         }
 
+        /// <summary>
+        /// 目标语言是中文时，判定文本里是否残留韩文/日文/西里尔字形。
+        /// 用途：翻译核心的来源优先级把 Korean/Japanese 排在 English 之前，当模组缺简体译文时
+        /// 可能把韩文/日文**原样写进简体包**（本机实测 291 条）。这里作为最后一道闸。
+        /// </summary>
+        public static bool HasForeignScriptResidue(string text, TargetLanguage targetLang)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+            if (targetLang != TargetLanguage.Simplified && targetLang != TargetLanguage.Traditional) return false;
+
+            foreach (char c in text)
+            {
+                if ((c >= '\uAC00' && c <= '\uD7AF') ||   // 韩文音节
+                    (c >= '\u1100' && c <= '\u11FF') ||   // 韩文字母
+                    (c >= '\u3130' && c <= '\u318F') ||   // 韩文兼容字母
+                    (c >= '\u3041' && c <= '\u3096') ||   // 平假名（排除 ・ ー 等标点）
+                    (c >= '\u30A1' && c <= '\u30FA') ||   // 片假名
+                    (c >= '\u0400' && c <= '\u04FF'))     // 西里尔字母
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public static bool LooksLikePlaceholderTranslation(string text, TargetLanguage targetLang)
         {
             if (string.IsNullOrWhiteSpace(text)) return false;

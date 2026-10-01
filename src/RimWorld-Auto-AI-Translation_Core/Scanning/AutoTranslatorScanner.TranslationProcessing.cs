@@ -927,6 +927,11 @@ namespace AutoTranslator_Core
             if (IsUntranslatableGrammarRule(primarySourceText)) return primarySourceText;
 
             string candidate = SanitizeTranslationResult(secondaryTranslation, primarySourceText);
+            if (LanguageDetector.HasForeignScriptResidue(candidate, AutoTranslatorMod.Settings.TargetLang))
+            {
+                AddValidationStat(s => s.EnglishResidualFallback++);
+                return primarySourceText;   // 退回英文源，绝不把韩/日文当译文
+            }
             if (HasProtectedTokenMismatch(candidate, primarySourceText) || HasFormatArgumentMismatch(candidate, primarySourceText))
             {
                 AddValidationStat(s => s.ProtectedTokenMismatchDetected++);
@@ -1000,6 +1005,8 @@ namespace AutoTranslator_Core
                 else
                 {
                     englishResidual = TranslationHasLikelyEnglishResidual(sanitized, sourceTexts[i], true);
+            englishResidual = englishResidual
+                || LanguageDetector.HasForeignScriptResidue(sanitized, AutoTranslatorMod.Settings.TargetLang);
                     if (!englishResidual)
                     {
                         translatedTexts[i] = sanitized;
@@ -1089,6 +1096,12 @@ namespace AutoTranslator_Core
             sanitized = SanitizeTranslationResult(translated, sourceText);
             if (string.IsNullOrWhiteSpace(sanitized))
             {
+                return false;
+            }
+
+            if (LanguageDetector.HasForeignScriptResidue(sanitized, AutoTranslatorMod.Settings.TargetLang))
+            {
+                AddValidationStat(s => s.EnglishResidualFallback++);
                 return false;
             }
 
