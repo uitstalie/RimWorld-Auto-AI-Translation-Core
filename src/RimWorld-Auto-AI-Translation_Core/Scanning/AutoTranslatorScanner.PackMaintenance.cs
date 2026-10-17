@@ -77,7 +77,7 @@ namespace AutoTranslator_Core
                                     NotifyTranslationFileChanged(oldFile);
                                     NotifyTranslationFileChanged(newFile);
                                 }
-                                AutoTranslatorSettings.AddLog("ATC_Log_MigrateSuccess".Translate(packageName, defType));
+                                AutoTranslatorSettings.AddLog(AutoTranslatorAPI.TranslateText("ATC_Log_MigrateSuccess", packageName, defType));
                             }
                         }
 
@@ -162,7 +162,35 @@ namespace AutoTranslator_Core
             if (!File.Exists(aboutPath))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(aboutPath));
-                File.WriteAllText(aboutPath, "<?xml version=\"1.0\" encoding=\"utf-8\"?><ModMetaData><name>! AutoTranslation AI Pack</name><author>Auto Translator Core</author><packageId>AITranslation.Pack</packageId><supportedVersions><li>1.6</li></supportedVersions></ModMetaData>");
+                File.WriteAllText(aboutPath, "<?xml version=\"1.0\" encoding=\"utf-8\"?><ModMetaData><name>! AutoTranslation AI Pack</name><author>Auto Translator Core</author><packageId>AITranslation.Pack</packageId><supportedVersions><li>1.5</li><li>1.6</li><li>1.7</li></supportedVersions></ModMetaData>");
+            }
+            else
+            {
+                // Upgrade only our generated pack's metadata; preserve translations
+                // and any other author-supplied metadata or supported versions.
+                var document = new XmlDocument();
+                document.Load(aboutPath);
+                if (string.Equals(document.SelectSingleNode("/ModMetaData/packageId")?.InnerText,
+                    "AITranslation.Pack", StringComparison.OrdinalIgnoreCase))
+                {
+                    XmlNode root = document.DocumentElement;
+                    XmlNode versions = root.SelectSingleNode("supportedVersions");
+                    bool changed = false;
+                    if (versions == null)
+                    {
+                        versions = root.AppendChild(document.CreateElement("supportedVersions"));
+                        changed = true;
+                    }
+                    foreach (string version in new[] { "1.5", "1.6", "1.7" })
+                    {
+                        if (versions.SelectSingleNode("li[text()='" + version + "']") != null) continue;
+                        XmlElement item = document.CreateElement("li");
+                        item.InnerText = version;
+                        versions.AppendChild(item);
+                        changed = true;
+                    }
+                    if (changed) document.Save(aboutPath);
+                }
             }
         }
 
@@ -585,7 +613,8 @@ namespace AutoTranslator_Core
 
                 string fixedValue = SanitizeTranslationResult(pair.Value, sourceText);
                 if (string.Equals(fixedValue, pair.Value, StringComparison.Ordinal)) continue;
-                if (HasProtectedTokenMismatch(fixedValue, sourceText)) continue;
+                if (HasProtectedTokenMismatch(fixedValue, sourceText) ||
+                    HasTranslatableTitleTagMismatch(fixedValue, sourceText)) continue;
 
                 repaired[pair.Key] = fixedValue;
                 changed = true;

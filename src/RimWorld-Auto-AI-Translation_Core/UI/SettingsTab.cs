@@ -46,7 +46,12 @@ namespace AutoTranslator_Core
             Widgets.CheckboxLabeled(l.GetRect(30f), "ATC_AutoTranslateOnUpdate".Translate(), ref Settings.AutoTranslateOnUpdate);
 
             l.Gap(5f);
+            bool previousUiInterceptor = Settings.EnableUIInterceptor;
             Widgets.CheckboxLabeled(l.GetRect(30f), "ATC_EnableUIInterceptor".Translate(), ref Settings.EnableUIInterceptor);
+            if (previousUiInterceptor != Settings.EnableUIInterceptor)
+            {
+                TargetedHardcodedUi.HardcodedUiTargetedPatchManager.RequestReload();
+            }
             if (!Settings.EnableUIInterceptor && !AutoTranslatorSettings.IsRunning) GUI.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
             Widgets.CheckboxLabeled(l.GetRect(30f), "ATC_EnableUINewTranslation".Translate(), ref Settings.EnableUINewTranslation);
             Widgets.CheckboxLabeled(l.GetRect(30f), "ATC_EnableUIErrorLogInterception".Translate(), ref Settings.EnableUIErrorLogInterception);
@@ -55,6 +60,12 @@ namespace AutoTranslator_Core
             if (!Settings.EnableUIInterceptor && !AutoTranslatorSettings.IsRunning) GUI.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
             Widgets.CheckboxLabeled(l.GetRect(30f), "ATC_ShowOriginalUI".Translate(), ref Settings.ShowOriginalUI);
             GUI.color = Color.white;
+            Rect uiManagerRect = l.GetRect(35f);
+            if (Widgets.ButtonText(uiManagerRect, "ATC_UIManager_Open".Translate(UIInterceptor.GetManagedEntryCount())))
+            {
+                Find.WindowStack.Add(new Window_UITranslationManager());
+            }
+            TooltipHandler.TipRegion(uiManagerRect, "ATC_UIManager_OpenTip".Translate());
             l.Gap(15f);
 
 
@@ -107,6 +118,12 @@ namespace AutoTranslator_Core
                 "600"
             );
             GUI.color = Color.white;
+            l.Gap(15f);
+
+            DrawTranslationPolicyAgentSettings(l);
+            l.Gap(15f);
+
+            DrawHardcodedUiPrototypeSettings(l);
             l.Gap(15f);
 
             DrawRuntimeProfilePanel(l, viewRect);
@@ -166,7 +183,9 @@ namespace AutoTranslator_Core
                 {
                     config.CustomBaseUrl = Widgets.TextField(urlRect, config.CustomBaseUrl);
                     if (string.IsNullOrEmpty(config.CustomBaseUrl)) Widgets.Label(urlRect, "  " + "ATC_CustomUrlOptional".Translate());
+                    TooltipHandler.TipRegion(urlRect, "ATC_ApiBaseUrlHint".Translate());
                 }
+                DrawPlayer2Options(l, config, !AutoTranslatorSettings.IsRunning);
 
                 Rect delRect = new Rect(rowA.x + rowA.width * 0.92f, rowA.y, rowA.width * 0.08f, rowA.height - 2f);
                 GUI.color = new Color(1f, 0.4f, 0.4f);
@@ -182,7 +201,10 @@ namespace AutoTranslator_Core
                 Rect keyRect = new Rect(rowB.x, rowB.y, rowB.width * 0.45f, rowB.height - 2f);
 
                 config.Key = Widgets.TextField(keyRect, config.Key);
-                if (string.IsNullOrEmpty(config.Key)) Widgets.Label(keyRect, "  " + "ATC_PasteKey".Translate());
+                if (config.Provider == TranslatorProvider.Custom_OpenAI)
+                    TooltipHandler.TipRegion(keyRect, "ATC_ApiKeyOptional".Translate());
+                if (string.IsNullOrEmpty(config.Key)) Widgets.Label(keyRect, "  " +
+                    (config.Provider == TranslatorProvider.Custom_OpenAI ? "ATC_ApiKeyOptional" : "ATC_PasteKey").Translate());
 
                 Rect modelInputRect = new Rect(rowB.x + rowB.width * 0.47f, rowB.y, rowB.width * 0.45f, rowB.height - 2f);
                 Rect modelBtnRect = new Rect(modelInputRect.xMax + 5f, rowB.y, rowB.width * 0.08f - 5f, rowB.height - 2f);
@@ -192,6 +214,10 @@ namespace AutoTranslator_Core
                     GUI.color = Color.yellow;
                     Widgets.Label(modelInputRect, "📡 " + "ATC_FetchingModel".Translate());
                     GUI.color = AutoTranslatorSettings.IsRunning ? Color.grey : Color.white;
+                }
+                else if (config.Provider == TranslatorProvider.Custom_OpenAI && config.UsePlayer2Protocol)
+                {
+                    Widgets.Label(modelInputRect, "ATC_Player2_AppModel".Translate());
                 }
                 else
                 {
@@ -206,7 +232,7 @@ namespace AutoTranslator_Core
                     }
                 }
 
-                if (Widgets.ButtonText(modelBtnRect, "▼"))
+                if (!config.UsePlayer2Protocol && Widgets.ButtonText(modelBtnRect, "▼"))
                 {
                     if (config.FetchedModels.Count > 0 && !AutoTranslatorSettings.IsRunning && !config.IsFetching)
                     {
@@ -222,6 +248,7 @@ namespace AutoTranslator_Core
                 GUI.color = AutoTranslatorSettings.IsRunning ? Color.grey : Color.white;
 
 
+                DrawApiEndpointValidation(l, config);
                 Rect rowC = l.GetRect(24f);
                 Rect testBtnRect = new Rect(rowC.x, rowC.y + 2f, 120f, rowC.height);
                 Rect refetchBtnRect = new Rect(testBtnRect.xMax + 10f, rowC.y + 2f, 140f, rowC.height);
@@ -232,7 +259,11 @@ namespace AutoTranslator_Core
                     {
                         Messages.Message("ATC_Msg_ApiKeyDisabled".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
                     }
-                    else if (string.IsNullOrEmpty(config.Key) || config.Key.Length <= 10)
+                    else if (!string.IsNullOrEmpty(AutoTranslatorAPI.GetApiEndpointError(config)))
+                    {
+                        Messages.Message(AutoTranslatorAPI.GetApiEndpointError(config).Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                    }
+                    else if (!AutoTranslatorAPI.HasApiCredential(config))
                     {
                         Messages.Message("ATC_EmptyConfigWarning".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
                     }
@@ -268,7 +299,11 @@ namespace AutoTranslator_Core
                         {
                             Messages.Message("ATC_Msg_ApiKeyDisabled".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
                         }
-                        else if (string.IsNullOrEmpty(config.Key) || string.IsNullOrEmpty(config.SelectedModel))
+                        else if (!string.IsNullOrEmpty(AutoTranslatorAPI.GetApiEndpointError(config)))
+                        {
+                            Messages.Message(AutoTranslatorAPI.GetApiEndpointError(config).Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                        }
+                        else if (!AutoTranslatorAPI.IsConfigReady(config))
                         {
                             Messages.Message("ATC_EmptyConfigWarning".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
                         }
@@ -358,6 +393,368 @@ namespace AutoTranslator_Core
                 ));
             }
             GUI.color = Color.white;
+        }
+
+        private void DrawTranslationPolicyAgentSettings(Listing_Standard l)
+        {
+            bool canEdit = !AutoTranslatorSettings.IsRunning;
+            bool enabled = Settings.EnableTranslationPolicyAgent;
+            int maxCallsPerRun = Math.Min(20, Math.Max(0, Settings.PolicyAgentMaxCallsPerRun));
+            long maxEstimatedTokensPerRun = Math.Min(
+                200000L,
+                Math.Max(0L, Settings.PolicyAgentMaxEstimatedTokensPerRun));
+            int maxCallsPerMod = Math.Min(20, Math.Max(0, Settings.PolicyAgentMaxCallsPerMod));
+
+            GUI.color = canEdit ? Color.white : Color.grey;
+            Rect enableRect = l.GetRect(30f);
+            Widgets.CheckboxLabeled(enableRect, "ATC_PolicyAgent_Enable".Translate(), ref enabled);
+            if (Mouse.IsOver(enableRect))
+            {
+                TooltipHandler.TipRegion(enableRect, "ATC_PolicyAgent_EnableTooltip".Translate());
+            }
+
+            DrawPolicyAgentApiConfig(l, canEdit);
+
+            Rect callsPerRunRect = l.GetRect(30f);
+            maxCallsPerRun = Mathf.RoundToInt(Widgets.HorizontalSlider(
+                callsPerRunRect,
+                maxCallsPerRun,
+                0f,
+                20f,
+                false,
+                "ATC_PolicyAgent_MaxCallsPerRun".Translate(maxCallsPerRun),
+                "0",
+                "20"));
+
+            Rect tokensPerRunRect = l.GetRect(30f);
+            float tokenSliderValue = Widgets.HorizontalSlider(
+                tokensPerRunRect,
+                maxEstimatedTokensPerRun,
+                0f,
+                200000f,
+                false,
+                "ATC_PolicyAgent_MaxEstimatedTokensPerRun".Translate(maxEstimatedTokensPerRun),
+                "0",
+                "200000");
+            maxEstimatedTokensPerRun = Mathf.RoundToInt(tokenSliderValue / 10000f) * 10000L;
+
+            Rect callsPerModRect = l.GetRect(30f);
+            maxCallsPerMod = Mathf.RoundToInt(Widgets.HorizontalSlider(
+                callsPerModRect,
+                maxCallsPerMod,
+                0f,
+                20f,
+                false,
+                "ATC_PolicyAgent_MaxCallsPerMod".Translate(maxCallsPerMod),
+                "0",
+                "20"));
+
+            Text.Font = GameFont.Tiny;
+            Widgets.Label(l.GetRect(24f), "ATC_PolicyAgent_RetryNotice".Translate(Settings.PolicyAgentMaxRetriesPerRequest));
+            Widgets.Label(l.GetRect(58f), "ATC_PolicyAgent_BudgetPrompt_Notice".Translate());
+            Text.Font = GameFont.Small;
+
+            Rect clearCacheRect = l.GetRect(32f);
+            bool clearClicked = Widgets.ButtonText(clearCacheRect, "ATC_PolicyAgent_ClearCache".Translate());
+            if (clearClicked && canEdit)
+            {
+                bool cacheCleared = AutoTranslatorScanner.ClearTranslationPolicyAgentCache();
+                Messages.Message(
+                    (cacheCleared
+                        ? "ATC_PolicyAgent_CacheCleared"
+                        : "ATC_PolicyAgent_CacheClearFailed").Translate(),
+                    cacheCleared ? MessageTypeDefOf.PositiveEvent : MessageTypeDefOf.RejectInput,
+                    false);
+            }
+
+            if (canEdit)
+            {
+                Settings.EnableTranslationPolicyAgent = enabled;
+                Settings.PolicyAgentMaxCallsPerRun = Math.Min(20, Math.Max(0, maxCallsPerRun));
+                Settings.PolicyAgentMaxEstimatedTokensPerRun = Math.Min(
+                    200000L,
+                    Math.Max(0L, maxEstimatedTokensPerRun));
+                Settings.PolicyAgentMaxCallsPerMod = Math.Min(20, Math.Max(0, maxCallsPerMod));
+            }
+
+            GUI.color = Color.white;
+        }
+
+        private void DrawPolicyAgentApiConfig(Listing_Standard l, bool canEdit)
+        {
+            if (Settings.PolicyAgentApiConfig == null)
+            {
+                Settings.PolicyAgentApiConfig = new ApiKeyConfig
+                {
+                    Label = "Policy Agent"
+                };
+            }
+
+            ApiKeyConfig config = Settings.PolicyAgentApiConfig;
+            if (config.FetchedModels == null) config.FetchedModels = new List<string>();
+
+            Text.Font = GameFont.Small;
+            Widgets.Label(l.GetRect(24f), "ATC_PolicyAgent_ApiTitle".Translate());
+            Text.Font = GameFont.Tiny;
+            Widgets.Label(l.GetRect(58f), "ATC_PolicyAgent_ApiNotice".Translate());
+            Text.Font = GameFont.Small;
+
+            GUI.color = canEdit ? Color.white : Color.grey;
+            bool configEnabled = config.Enabled;
+            Rect enabledRect = l.GetRect(30f);
+            Widgets.CheckboxLabeled(enabledRect, "ATC_PolicyAgent_ApiEnabled".Translate(), ref configEnabled);
+            if (canEdit) config.Enabled = configEnabled;
+
+            Rect providerRow = l.GetRect(30f);
+            Rect providerRect = new Rect(providerRow.x, providerRow.y, providerRow.width * 0.30f, providerRow.height - 2f);
+            if (Widgets.ButtonText(providerRect, "ATC_Provider".Translate() + ": " + config.Provider))
+            {
+                if (canEdit)
+                {
+                    List<FloatMenuOption> options = new List<FloatMenuOption>();
+                    foreach (TranslatorProvider provider in Enum.GetValues(typeof(TranslatorProvider)))
+                    {
+                        if (provider == TranslatorProvider.DeepL) continue;
+                        TranslatorProvider capturedProvider = provider;
+                        options.Add(new FloatMenuOption(capturedProvider.ToString(), () =>
+                        {
+                            config.Provider = capturedProvider;
+                            config.SelectedModel = "";
+                            AutoTranslatorAPI.ResetModelFetchState(config, clearModels: true);
+                        }));
+                    }
+                    Find.WindowStack.Add(new FloatMenu(options));
+                }
+            }
+
+            Rect urlRect = new Rect(providerRow.x + providerRow.width * 0.32f, providerRow.y, providerRow.width * 0.68f, providerRow.height - 2f);
+            TooltipHandler.TipRegion(urlRect, "ATC_ApiBaseUrlHint".Translate());
+            if (canEdit)
+            {
+                config.CustomBaseUrl = Widgets.TextField(urlRect, config.CustomBaseUrl ?? "");
+                if (string.IsNullOrEmpty(config.CustomBaseUrl))
+                {
+                    GUI.color = Color.gray;
+                    Widgets.Label(urlRect, "  " + "ATC_CustomUrlOptional".Translate());
+                    GUI.color = Color.white;
+                }
+            }
+            else
+            {
+                Widgets.Label(urlRect, config.CustomBaseUrl ?? "");
+            }
+
+            DrawPlayer2Options(l, config, canEdit);
+
+            GUI.color = canEdit ? Color.white : Color.grey;
+            Rect credentialsRow = l.GetRect(30f);
+            Rect keyRect = new Rect(credentialsRow.x, credentialsRow.y, credentialsRow.width * 0.45f, credentialsRow.height - 2f);
+            if (config.Provider == TranslatorProvider.Custom_OpenAI)
+                TooltipHandler.TipRegion(keyRect, "ATC_ApiKeyOptional".Translate());
+            if (canEdit) config.Key = Widgets.TextField(keyRect, config.Key ?? "");
+            else Widgets.Label(keyRect, string.IsNullOrEmpty(config.Key) ? "" : "********");
+            if (string.IsNullOrEmpty(config.Key))
+            {
+                GUI.color = Color.gray;
+                Widgets.Label(keyRect, "  " +
+                    (config.Provider == TranslatorProvider.Custom_OpenAI ? "ATC_ApiKeyOptional" : "ATC_PasteKey").Translate());
+                GUI.color = canEdit ? Color.white : Color.grey;
+            }
+
+            Rect modelInputRect = new Rect(credentialsRow.x + credentialsRow.width * 0.47f, credentialsRow.y, credentialsRow.width * 0.45f, credentialsRow.height - 2f);
+            Rect modelButtonRect = new Rect(modelInputRect.xMax + 5f, credentialsRow.y, credentialsRow.width * 0.08f - 5f, credentialsRow.height - 2f);
+            if (config.IsFetching)
+            {
+                GUI.color = Color.yellow;
+                Widgets.Label(modelInputRect, "ATC_FetchingModel".Translate());
+                GUI.color = canEdit ? Color.white : Color.grey;
+            }
+            else if (config.Provider == TranslatorProvider.Custom_OpenAI && config.UsePlayer2Protocol)
+            {
+                Widgets.Label(modelInputRect, "ATC_Player2_AppModel".Translate());
+            }
+            else if (canEdit)
+            {
+                config.SelectedModel = Widgets.TextField(modelInputRect, config.SelectedModel ?? "");
+                if (string.IsNullOrEmpty(config.SelectedModel))
+                {
+                    GUI.color = Color.gray;
+                    Widgets.Label(modelInputRect, "  " + "ATC_InputOrSelectModel".Translate());
+                    GUI.color = Color.white;
+                }
+            }
+            else
+            {
+                Widgets.Label(modelInputRect, config.SelectedModel ?? "");
+            }
+
+            if (!config.UsePlayer2Protocol && Widgets.ButtonText(modelButtonRect, "▼") && canEdit && !config.IsFetching)
+            {
+                if (config.FetchedModels.Count > 0)
+                {
+                    List<FloatMenuOption> options = config.FetchedModels
+                        .Where(model => !string.IsNullOrWhiteSpace(model))
+                        .Select(model => new FloatMenuOption(model, () => config.SelectedModel = model))
+                        .ToList();
+                    if (options.Count > 0) Find.WindowStack.Add(new FloatMenu(options));
+                }
+                else
+                {
+                    Messages.Message("ATC_Msg_NoModelListManualInput".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                }
+            }
+
+            GUI.color = canEdit ? Color.white : Color.grey;
+            DrawApiEndpointValidation(l, config);
+            Rect actionsRow = l.GetRect(28f);
+            Rect fetchRect = new Rect(actionsRow.x, actionsRow.y + 1f, 150f, actionsRow.height - 2f);
+            Rect testRect = new Rect(fetchRect.xMax + 10f, actionsRow.y + 1f, 130f, actionsRow.height - 2f);
+
+            if (config.IsFetching)
+            {
+                GUI.color = Color.yellow;
+                Widgets.Label(fetchRect, "ATC_FetchingModel".Translate());
+            }
+            else if (Widgets.ButtonText(fetchRect, "↻ " + "ATC_RefetchModels".Translate()) && canEdit)
+            {
+                if (!config.Enabled)
+                {
+                    Messages.Message("ATC_Msg_ApiKeyDisabled".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                }
+                else if (!string.IsNullOrEmpty(AutoTranslatorAPI.GetApiEndpointError(config)))
+                {
+                    Messages.Message(AutoTranslatorAPI.GetApiEndpointError(config).Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                }
+                else if (!AutoTranslatorAPI.HasApiCredential(config))
+                {
+                    Messages.Message("ATC_EmptyConfigWarning".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                }
+                else
+                {
+                    AutoTranslatorAPI.AutoFetchForConfig(config, true);
+                }
+            }
+
+            GUI.color = canEdit ? new Color(0.6f, 0.9f, 0.6f) : Color.grey;
+            if (config.IsTesting)
+            {
+                GUI.color = Color.yellow;
+                Widgets.Label(testRect, "ATC_Testing".Translate());
+            }
+            else if (Widgets.ButtonText(testRect, "ATC_TestConnection".Translate()) && canEdit)
+            {
+                if (!config.Enabled)
+                {
+                    Messages.Message("ATC_Msg_ApiKeyDisabled".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                }
+                else if (!string.IsNullOrEmpty(AutoTranslatorAPI.GetApiEndpointError(config)))
+                {
+                    Messages.Message(AutoTranslatorAPI.GetApiEndpointError(config).Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                }
+                else if (!AutoTranslatorAPI.IsPolicyAgentConfigReady(config))
+                {
+                    Messages.Message("ATC_PolicyAgent_ApiIncomplete".Translate().ToString(), MessageTypeDefOf.RejectInput, false);
+                }
+                else
+                {
+                    AutoTranslatorAPI.RunConnectionTest(config);
+                }
+            }
+
+            if (config.IsTesting && config.TestStartedUtcTicks > 0)
+            {
+                double elapsedSeconds = (DateTime.UtcNow.Ticks - config.TestStartedUtcTicks) / (double)TimeSpan.TicksPerSecond;
+                if (elapsedSeconds > Math.Max(30, AutoTranslatorMod.Settings.TimeoutSeconds + 15))
+                {
+                    config.IsTesting = false;
+                    config.TestStartedUtcTicks = 0L;
+                    config.TestGeneration++;
+                    AutoTranslatorSettings.AddErrorLog(AutoTranslatorAPI.TranslateText(
+                        "ATC_Error_TestConnectionTimeout", config.Provider.ToString()));
+                }
+            }
+
+            bool ready = AutoTranslatorAPI.IsPolicyAgentConfigReady(config);
+            Text.Font = GameFont.Tiny;
+            GUI.color = ready ? new Color(0.55f, 0.9f, 0.65f) : new Color(1f, 0.75f, 0.35f);
+            Widgets.Label(l.GetRect(30f), (ready
+                ? "ATC_PolicyAgent_ApiReady"
+                : "ATC_PolicyAgent_ApiIncomplete").Translate());
+            Text.Font = GameFont.Small;
+            GUI.color = Color.white;
+            l.Gap(10f);
+        }
+
+        private static void DrawApiEndpointValidation(Listing_Standard l, ApiKeyConfig config)
+        {
+            string errorKey = AutoTranslatorAPI.GetApiEndpointError(config);
+            if (string.IsNullOrEmpty(errorKey)) return;
+            Color oldColor = GUI.color;
+            GameFont oldFont = Text.Font;
+            GUI.color = new Color(1f, 0.75f, 0.35f);
+            Text.Font = GameFont.Small;
+            l.Label(errorKey.Translate());
+            Text.Font = oldFont;
+            GUI.color = oldColor;
+        }
+
+        private static void DrawPlayer2Options(Listing_Standard l, ApiKeyConfig config, bool canEdit)
+        {
+            if (config == null || config.Provider != TranslatorProvider.Custom_OpenAI) return;
+            bool enabled = config.UsePlayer2Protocol;
+            Rect modeRect = l.GetRect(28f);
+            if (canEdit) Widgets.CheckboxLabeled(modeRect, "ATC_Player2_Mode".Translate(), ref enabled);
+            else Widgets.Label(modeRect, (enabled ? "☑ " : "☐ ") + "ATC_Player2_Mode".Translate());
+            if (canEdit) config.UsePlayer2Protocol = enabled;
+            if (!enabled) return;
+
+            Rect idRect = l.GetRect(28f);
+            if (canEdit) config.Player2GameClientId = Widgets.TextField(idRect, config.Player2GameClientId ?? "");
+            else Widgets.Label(idRect, string.IsNullOrEmpty(config.Player2GameClientId) ? "" : "********");
+            if (string.IsNullOrEmpty(config.Player2GameClientId))
+            {
+                GUI.color = Color.gray;
+                Widgets.Label(idRect, "  " + "ATC_Player2_ClientIdHint".Translate());
+                GUI.color = canEdit ? Color.white : Color.grey;
+            }
+            TooltipHandler.TipRegion(idRect, "ATC_Player2_ClientIdHint".Translate());
+        }
+
+        private void DrawHardcodedUiPrototypeSettings(Listing_Standard l)
+        {
+            bool previousEnabled = Settings.EnableHardcodedUiPrototype;
+            bool enabled = previousEnabled;
+            Rect enableRect = l.GetRect(30f);
+            Widgets.CheckboxLabeled(enableRect, "ATC_HardcodedUi_EnablePrototype".Translate(), ref enabled);
+            if (Mouse.IsOver(enableRect))
+            {
+                TooltipHandler.TipRegion(enableRect, "ATC_HardcodedUi_EnablePrototypeTooltip".Translate());
+            }
+
+            if (enabled != previousEnabled)
+            {
+                Settings.EnableHardcodedUiPrototype = enabled;
+                TargetedHardcodedUi.HardcodedUiTargetedPatchManager.RequestReload();
+                WriteSettings();
+            }
+
+            Text.Font = GameFont.Tiny;
+            Widgets.Label(l.GetRect(24f), "ATC_HardcodedUi_Status".Translate(
+                TargetedHardcodedUi.HardcodedUiTargetedPatchManager.GetStatusLine()));
+            Text.Font = GameFont.Small;
+
+            Rect reloadRect = l.GetRect(32f);
+            if (Widgets.ButtonText(reloadRect, "ATC_HardcodedUi_ReloadManifest".Translate()))
+            {
+                TargetedHardcodedUi.HardcodedUiTargetedPatchManager.RequestReload();
+            }
+
+            if (Settings.EnableUIInterceptor && Settings.EnableHardcodedUiPrototype)
+            {
+                GUI.color = new Color(1f, 0.65f, 0.25f);
+                Widgets.Label(l.GetRect(24f), "ATC_HardcodedUi_Conflict".Translate());
+                GUI.color = Color.white;
+            }
         }
 
         private static void QueueLegacyRepairFromSettings()

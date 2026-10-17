@@ -158,28 +158,32 @@ namespace AutoTranslator_Core
             bool hasKana = KanaRegex.IsMatch(languageSample);
             bool hasHangul = HangulRegex.IsMatch(languageSample);
             bool hasCJK = CJKRegex.IsMatch(languageSample);
+            bool hasThai = ThaiRegex.IsMatch(languageSample);
 
             switch (targetLang)
             {
                 case TargetLanguage.Traditional:
                 case TargetLanguage.Simplified:
-                    if (hasEnglish || hasCyrillic || hasKana || hasHangul) isForeignText = true;
+                    if (hasEnglish || hasCyrillic || hasKana || hasHangul || hasThai) isForeignText = true;
                     break;
                 case TargetLanguage.Japanese:
-                    if (hasEnglish || hasCyrillic || hasHangul || (hasCJK && !hasKana)) isForeignText = true;
+                    if (hasEnglish || hasCyrillic || hasHangul || hasThai || (hasCJK && !hasKana)) isForeignText = true;
                     break;
                 case TargetLanguage.Korean:
-                    if (hasEnglish || hasCyrillic || hasKana || hasCJK) isForeignText = true;
+                    if (hasEnglish || hasCyrillic || hasKana || hasCJK || hasThai) isForeignText = true;
                     break;
                 case TargetLanguage.English:
-                    if (hasCJK || hasKana || hasHangul || hasCyrillic) isForeignText = true;
+                    if (hasCJK || hasKana || hasHangul || hasCyrillic || hasThai) isForeignText = true;
                     break;
                 case TargetLanguage.Russian:
                 case TargetLanguage.Ukrainian:
-                    if (hasEnglish || hasCJK || hasKana || hasHangul) isForeignText = true;
+                    if (hasEnglish || hasCJK || hasKana || hasHangul || hasThai) isForeignText = true;
+                    break;
+                case TargetLanguage.Thai:
+                    if (!hasThai && (hasEnglish || hasCJK || hasKana || hasHangul || hasCyrillic)) isForeignText = true;
                     break;
                 default:
-                    if (hasEnglish || hasCJK) isForeignText = true;
+                    if (hasEnglish || hasCJK || hasThai) isForeignText = true;
                     break;
             }
 
@@ -212,40 +216,59 @@ namespace AutoTranslator_Core
                 {
                     await Task.Delay(250, token);
 
+                    int batchGeneration;
+                    TargetLanguage batchTargetLanguage;
                     List<string> batch = new List<string>();
-                    while (batch.Count < 80 && ClassificationQueue.TryDequeue(out string text))
+                    lock (_cachePersistenceLock)
                     {
-                        System.Threading.Interlocked.Decrement(ref _classificationApproxCount);
-                        batch.Add(text);
+                        batchGeneration = System.Threading.Volatile.Read(ref _uiLanguageGeneration);
+                        batchTargetLanguage = AutoTranslatorMod.Settings.TargetLang;
+                        while (batch.Count < 80 && ClassificationQueue.TryDequeue(out string text))
+                        {
+                            System.Threading.Interlocked.Decrement(ref _classificationApproxCount);
+                            batch.Add(text);
+                        }
                     }
 
                     if (batch.Count == 0) continue;
 
                     bool changedRenderDecision = false;
-                    foreach (string original in batch)
+                    lock (_cachePersistenceLock)
                     {
-                        string classificationKey = BuildCacheKey(original);
-                        try
+                        if (!IsUILanguageContextCurrent(batchGeneration, batchTargetLanguage))
                         {
-                            ClassifyUIRenderText(original);
-                            changedRenderDecision = true;
+                            foreach (string original in batch)
+                            {
+                                PendingClassifications.TryRemove(BuildCacheKey(batchTargetLanguage, original), out _);
+                            }
+                            continue;
                         }
-                        catch (Exception ex)
-                        {
-                            RememberRenderDecision(
-                                BuildRenderDecisionKey(original),
-                                UIRenderDecisionKind.Pending,
-                                null,
-                                DateTime.UtcNow.Ticks + TimeSpan.FromSeconds(3).Ticks);
-                            Log.Warning($"[AutoTranslationCore] UI classification failed: {ex.Message}");
-                        }
-                        finally
-                        {
-                            PendingClassifications.TryRemove(classificationKey, out _);
-                        }
-                    }
 
-                    if (changedRenderDecision) SaveCacheIfDue();
+                        foreach (string original in batch)
+                        {
+                            string classificationKey = BuildCacheKey(batchTargetLanguage, original);
+                            try
+                            {
+                                ClassifyUIRenderText(original);
+                                changedRenderDecision = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                RememberRenderDecision(
+                                    BuildRenderDecisionKey(original),
+                                    UIRenderDecisionKind.Pending,
+                                    null,
+                                    DateTime.UtcNow.Ticks + TimeSpan.FromSeconds(3).Ticks);
+                                Log.Warning($"[AutoTranslationCore] UI classification failed: {ex.Message}");
+                            }
+                            finally
+                            {
+                                PendingClassifications.TryRemove(classificationKey, out _);
+                            }
+                        }
+
+                        if (changedRenderDecision) SaveCacheIfDue();
+                    }
                 }
                 catch (TaskCanceledException)
                 {
@@ -317,41 +340,66 @@ namespace AutoTranslator_Core
 
                     if (TranslationQueue.Count > 0 && AutoTranslatorAPI.HasAnyReadyConfig())
                     {
+                        int batchGeneration;
+                        TargetLanguage batchTargetLanguage;
                         List<string> batch = new List<string>();
-                        while (batch.Count < 20 && TranslationQueue.TryDequeue(out string text))
+                        lock (_cachePersistenceLock)
                         {
-                            System.Threading.Interlocked.Decrement(ref _queuedApproxCount);
-                            batch.Add(text);
+                            batchGeneration = System.Threading.Volatile.Read(ref _uiLanguageGeneration);
+                            batchTargetLanguage = AutoTranslatorMod.Settings.TargetLang;
+                            while (batch.Count < 20 && TranslationQueue.TryDequeue(out string text))
+                            {
+                                System.Threading.Interlocked.Decrement(ref _queuedApproxCount);
+                                batch.Add(text);
+                            }
                         }
                         if (batch.Count > 0)
                         {
                             var translatedBatch = await AutoTranslatorAPI.TranslateBatchAsync(batch);
                             if (translatedBatch != null && translatedBatch.Count == batch.Count)
                             {
-                                bool hasNewCache = false;
-                                for (int i = 0; i < batch.Count; i++)
+                                lock (_cachePersistenceLock)
                                 {
-                                    string original = batch[i];
-                                    string originalCacheKey = BuildCacheKey(original);
-                                    string translated = SanitizeUITranslationResult(original, translatedBatch[i]);
-                                    if (!string.IsNullOrEmpty(translated) && original != translated)
+                                    if (!IsUILanguageContextCurrent(batchGeneration, batchTargetLanguage))
                                     {
-                                        Cache[originalCacheKey] = translated;
-                                        hasNewCache = true;
+                                        foreach (string original in batch)
+                                        {
+                                            PendingTranslations.TryRemove(BuildCacheKey(batchTargetLanguage, original), out _);
+                                        }
+                                        continue;
                                     }
-                                    else
+
+                                    bool hasNewCache = false;
+                                    for (int i = 0; i < batch.Count; i++)
                                     {
-                                        RememberIgnored(original);
+                                        string original = batch[i];
+                                        string originalCacheKey = BuildCacheKey(batchTargetLanguage, original);
+                                        string translated = SanitizeUITranslationResult(original, translatedBatch[i]);
+                                        if (!string.IsNullOrEmpty(translated) && original != translated)
+                                        {
+                                            Cache[originalCacheKey] = translated;
+                                            hasNewCache = true;
+                                        }
+                                        else
+                                        {
+                                            RememberIgnored(original);
+                                        }
+                                        PendingTranslations.TryRemove(originalCacheKey, out _);
                                     }
-                                    PendingTranslations.TryRemove(originalCacheKey, out _);
+                                    if (hasNewCache) ClearRenderDecisionCache();
+                                    if (hasNewCache) MarkCacheDirty();
+                                    // Persist on the normal timer (and on shutdown)
+                                    // instead of parsing and rewriting the complete
+                                    // UI cache after every translation batch.
+                                    SaveCacheIfDue();
                                 }
-                                if (hasNewCache) ClearRenderDecisionCache();
-                                if (hasNewCache) _cacheDirty = true;
-                                SaveCacheIfDue(hasNewCache);
                             }
                             else
                             {
-                                foreach (var t in batch) PendingTranslations.TryRemove(BuildCacheKey(t), out _);
+                                foreach (var t in batch)
+                                {
+                                    PendingTranslations.TryRemove(BuildCacheKey(batchTargetLanguage, t), out _);
+                                }
                             }
                         }
                     }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
-  <ATC_ModTitle>AI 智能汉化网络 (AI Translation Network)V3.0</ATC_ModTitle>
+  <ATC_ModTitle>AI 智能汉化网络 (AI Translation Network)V4.1 BETA</ATC_ModTitle>
   <ATC_TargetLang>目标语系</ATC_TargetLang>
   <ATC_Lang_Traditional>繁体中文</ATC_Lang_Traditional>
   <ATC_Lang_Simplified>简体中文</ATC_Lang_Simplified>
@@ -76,8 +76,8 @@
   <ATC_FinishMessage_Title>翻译完成提示</ATC_FinishMessage_Title>
   <ATC_FinishMessage_OK>了解！(OK)</ATC_FinishMessage_OK>
   <ATC_FinishMessage_Text>翻译任务已顺利完成！\n【🪂 记忆体空投大成功】\n系统已透过官方合法通道，将最新的翻译直接注入游戏记忆体中！\n您现在可以直接关闭此视窗与设定面板，画面上的物品与科技已经瞬间变成您设定的语言囉！\n(註：实体 XML 备份已在背景自动生成，但您【完全不需要】去模组列表勾选它！下次开机系统也会自动隐形挂载，彻底告别排序冲突！祝您游戏愉快！)</ATC_FinishMessage_Text>
-  <ATC_Tutorial_FullText>【V3.0 使用教学：从白嫖到贡献】\n1. ☁️ 【先逛云端，拒绝重複造轮子】\n准备翻译前，强烈建议先前往【云端工坊】分页！看看是否有汉化组大佬或其他玩家已经上传了精翻包。支援一键批量下载，瞬间享受熟肉！\n\n2. ⚙️ 【设定 API 准备翻译】\n若云端没有你要的模组，请先至设定页选择【目标语系】(支援中、英、日、俄等多国语言) 与【供应商】(台湾推荐免费 Gemini，大陆推荐 DeepSeek)。支援「无限 API 弹匣」，点击「＋」号新增多组接口，系统会自动为你轮流分配任务，榨乾免费额度！\n(贴上金钥后，完全不需按搜寻，系统会在背景自动为你抓取模型！)\n\n3. 🚀 【一键翻译与记忆体空投】\n设定好线程数后，即可点击【🚀 一键翻译所有模组】或使用【🎯 翻译单/多重模组】进行精准打击。翻译完成后【完全不需要重开游戏】！系统会自动发动「记忆体空投」，瞬间将翻译注入游戏，关闭面板即可看见效果！\n\n4. 🔍 【全域工作台与上传分享】\n觉得机翻怪怪的？进入【全域编辑】分页，使用强大的「全域文本搜寻」一键揪出错字并修改！修改完成后，欢迎回到云端工坊将你的心血以【玩家精翻 (Manual)】的标籤上传，造福全世界的边缘人！\n\n【常见问题 Ｑ＆Ａ】\nQ: 为什么我在云端工坊没有「删除」按钮？\nA: 为了保护大家的心血，删除功能仅限拥有特权码的管理员或汉化组使用。一般玩家请放心上传，系统会智慧合併并自动保留最新的优质版本！\n\nQ: 什么是「一键注入热重载」？\nA: 如果你是硬核玩家，喜欢自己手动修改已生成的翻译 XML 档。存档后，只需点击这颗按钮，系统就会瞬间刷新前台 UI 快取并重新空投记忆体，改完秒看结果！\n\nQ: 为什么产线日誌一直跳出「等待重试」的红字警告？\nA: 这是因为 API 伺服器正在打瞌睡或遇到频率限制！模组内建超强的【指数退避重试】机制。只要后续有继续显示翻译成功，放着让子弹飞一会儿就好啦～(≧∀≦)ゞ\n\nQ: 使用本地端 (如 LM Studio / Ollama) 一直连线失败？\nA: 1. 请确保「自订 Base URL」有填写正确（如 http://localhost:1234），不用担心忘记打后缀，系统会自动帮你补上 /v1！\n2. 金钥 (API Key) 绝对不能留空！如果是本地端，请随便填几个字。\n\nQ: 动态 UI 拦截器会不会很卡？\nA: 本系统已导入「光速 O(1) 查表」与「防爆阀」机制，就算遇到报错海啸，游戏依旧稳锁 120FPS。但请注意，此功能会捕捉画面上所有未翻译外文，若使用【付费 API】请斟酌开启，以免帐单爆表！</ATC_Tutorial_FullText>
-  <ATC_UpdateLog_FullText>--- V3.0 云端工坊与全域编辑器上线 ---\n• 全新【云端共享工坊】：支援多语系翻译包一键上传与下载。具备「汉化组精翻」、「玩家精翻」与「AI 机翻」三种品质标籤，内建 3-2-1 智能版本控制、软删除防护与更新日誌功能。\n• 强化【全域翻译工作台】：新增非同步背景「全域文本搜寻」与动态进度条。即使安装数百个模组也能流畅搜寻所有快取与内建翻译，支援多语系过滤与一键跳转编辑。\n• 重构【网路传输底层】：全面升级为 Unity 原生网路引擎 (UnityWebRequest) 并强制 UTF-8 压缩，彻底根除过去因 Windows 系统编码冲突导致的报错与 ZIP 损毁问题。\n• 实装【智能微创排毒】：自动过滤底层高危变数与脸部模组 (如 FaceDef)，终结翻译后小人破图灾情；并在开机时自动清理旧版残留假翻译档。\n\n--- V2.2 底层架构与连线稳定性更新 ---\n• 优化【API 请求架构】：重构底层逻辑，提升不同 AI 供应商的相容性与资料解析稳定性。\n• 实装【自动退避重试】：当遇到伺服器拥挤 (HTTP 429) 或瞬间连线异常 (HTTP 500+) 时，系统将自动进行冷却并重试，减少翻译中断的机率。\n• 新增【自订超时与测试】：设定介面新增「测试连线」按钮与「超时秒数滑杆」。(若使用深度思考模型，系统将自动适配较长的等待时间)。\n• 改良【全局错误通知】：导入跨执行绪 UI 桥接技术，现在当 API 发生连线异常或金钥无效时，会即时于游戏画面左上角弹出提示，无须再频繁切换分页查看日誌。\n\n--- V2.1 翻译体验与智能升级 ---\n• 实装【一键打包导出】：支援将翻译好的模组独立提取至桌面，并附带声明浮水印，方便提交给原作者或汉化组润饰。\n• 新增【智能模组更新雷达】：系统现在能自动侦测出「有更新」或「未翻译」的模组。\n• 支援【自动汰旧换新】：开启后，在遇到模组更新时，系统将自动删除旧翻译档案并重新翻译，确保文本保持最新。\n• 修復【字串换行异常】：修正部分 `\n` 无法正常换行导致排版错误的底层问题。\n\n--- V2.0 效能优化与即时渲染 ---\n• 实装【即时记忆体注入】：翻译完成后，系统将翻译结果直接写入游戏记忆体，画面即刻切换为目标语系，下次开机自动生效，减少载入顺序冲突。\n• 优化【动态 UI 拦截效能】：重构底层拦截逻辑与快取设计，大幅降低游戏帧数 (FPS) 的效能消耗。\n• 新增【一键热重载】：手动修改 XML 翻译档后，可点击按钮瞬间刷新 UI 缓存，无须重新启动游戏。\n\n--- V1.0 正式版发布 ---\n• 实装【动态 UI 拦截系统】：支援即时拦截并自动翻译设定面板或静态 XML 遗漏的外文文本。\n• 实装【原文对照功能】：支援滑鼠悬停显示原文，方便进行双语对照。</ATC_UpdateLog_FullText>
+  <ATC_Tutorial_FullText>【V4.1 BETA 使用教学：从白嫖到贡献】\n1. ☁️ 【先逛云端，拒绝重複造轮子】\n准备翻译前，强烈建议先前往【云端工坊】分页！看看是否有汉化组大佬或其他玩家已经上传了精翻包。支援一键批量下载，瞬间享受熟肉！\n\n2. ⚙️ 【设定 API 准备翻译】\n若云端没有你要的模组，请先至设定页选择【目标语系】(支援中、英、日、俄等多国语言) 与【供应商】(台湾推荐免费 Gemini，大陆推荐 DeepSeek)。支援「无限 API 弹匣」，点击「＋」号新增多组接口，系统会自动为你轮流分配任务，榨乾免费额度！\n(贴上金钥后，完全不需按搜寻，系统会在背景自动为你抓取模型！)\n\n3. 🚀 【一键翻译与记忆体空投】\n设定好线程数后，即可点击【🚀 一键翻译所有模组】或使用【🎯 翻译单/多重模组】进行精准打击。翻译完成后【完全不需要重开游戏】！系统会自动发动「记忆体空投」，瞬间将翻译注入游戏，关闭面板即可看见效果！\n\n4. 🔍 【全域工作台与上传分享】\n觉得机翻怪怪的？进入【全域编辑】分页，使用强大的「全域文本搜寻」一键揪出错字并修改！修改完成后，欢迎回到云端工坊将你的心血以【玩家精翻 (Manual)】的标籤上传，造福全世界的边缘人！\n\n【常见问题 Ｑ＆Ａ】\nQ: 为什么我在云端工坊没有「删除」按钮？\nA: 为了保护大家的心血，删除功能仅限拥有特权码的管理员或汉化组使用。一般玩家请放心上传，系统会智慧合併并自动保留最新的优质版本！\n\nQ: 什么是「一键注入热重载」？\nA: 如果你是硬核玩家，喜欢自己手动修改已生成的翻译 XML 档。存档后，只需点击这颗按钮，系统就会瞬间刷新前台 UI 快取并重新空投记忆体，改完秒看结果！\n\nQ: 为什么产线日誌一直跳出「等待重试」的红字警告？\nA: 这是因为 API 伺服器正在打瞌睡或遇到频率限制！模组内建超强的【指数退避重试】机制。只要后续有继续显示翻译成功，放着让子弹飞一会儿就好啦～(≧∀≦)ゞ\n\nQ: 使用本地端 (如 LM Studio / Ollama) 一直连线失败？\nA: 1. 请确保「自订 Base URL」有填写正确（如 http://localhost:1234），不用担心忘记打后缀，系统会自动帮你补上 /v1！\n2. 金钥 (API Key) 绝对不能留空！如果是本地端，请随便填几个字。\n\nQ: 动态 UI 拦截器会不会很卡？\nA: 本系统已导入「光速 O(1) 查表」与「防爆阀」机制，就算遇到报错海啸，游戏依旧稳锁 120FPS。但请注意，此功能会捕捉画面上所有未翻译外文，若使用【付费 API】请斟酌开启，以免帐单爆表！</ATC_Tutorial_FullText>
+  <ATC_UpdateLog_FullText>--- V4.1 BETA 模组扫描与过滤诊断 ---\n• 修正自定义内容文件夹与旧版本 Defs 无法正确识别的问题。\n• 新增模组过滤明细，可查看原因、候选来源并直接打开模组文件夹。\n• 新增安全的强制翻译功能，并排除未启用的旧版本与条件式内容，避免浪费 Token。\n\n--- V4.0 BETA 云端工坊与全域编辑器上线 ---\n• 全新【云端共享工坊】：支援多语系翻译包一键上传与下载。具备「汉化组精翻」、「玩家精翻」与「AI 机翻」三种品质标籤，内建 3-2-1 智能版本控制、软删除防护与更新日誌功能。\n• 强化【全域翻译工作台】：新增非同步背景「全域文本搜寻」与动态进度条。即使安装数百个模组也能流畅搜寻所有快取与内建翻译，支援多语系过滤与一键跳转编辑。\n• 重构【网路传输底层】：全面升级为 Unity 原生网路引擎 (UnityWebRequest) 并强制 UTF-8 压缩，彻底根除过去因 Windows 系统编码冲突导致的报错与 ZIP 损毁问题。\n• 实装【智能微创排毒】：自动过滤底层高危变数与脸部模组 (如 FaceDef)，终结翻译后小人破图灾情；并在开机时自动清理旧版残留假翻译档。\n\n--- V2.2 底层架构与连线稳定性更新 ---\n• 优化【API 请求架构】：重构底层逻辑，提升不同 AI 供应商的相容性与资料解析稳定性。\n• 实装【自动退避重试】：当遇到伺服器拥挤 (HTTP 429) 或瞬间连线异常 (HTTP 500+) 时，系统将自动进行冷却并重试，减少翻译中断的机率。\n• 新增【自订超时与测试】：设定介面新增「测试连线」按钮与「超时秒数滑杆」。(若使用深度思考模型，系统将自动适配较长的等待时间)。\n• 改良【全局错误通知】：导入跨执行绪 UI 桥接技术，现在当 API 发生连线异常或金钥无效时，会即时于游戏画面左上角弹出提示，无须再频繁切换分页查看日誌。\n\n--- V2.1 翻译体验与智能升级 ---\n• 实装【一键打包导出】：支援将翻译好的模组独立提取至桌面，并附带声明浮水印，方便提交给原作者或汉化组润饰。\n• 新增【智能模组更新雷达】：系统现在能自动侦测出「有更新」或「未翻译」的模组。\n• 支援【自动汰旧换新】：开启后，在遇到模组更新时，系统将自动删除旧翻译档案并重新翻译，确保文本保持最新。\n• 修復【字串换行异常】：修正部分 `\n` 无法正常换行导致排版错误的底层问题。\n\n--- V2.0 效能优化与即时渲染 ---\n• 实装【即时记忆体注入】：翻译完成后，系统将翻译结果直接写入游戏记忆体，画面即刻切换为目标语系，下次开机自动生效，减少载入顺序冲突。\n• 优化【动态 UI 拦截效能】：重构底层拦截逻辑与快取设计，大幅降低游戏帧数 (FPS) 的效能消耗。\n• 新增【一键热重载】：手动修改 XML 翻译档后，可点击按钮瞬间刷新 UI 缓存，无须重新启动游戏。\n\n--- V1.0 正式版发布 ---\n• 实装【动态 UI 拦截系统】：支援即时拦截并自动翻译设定面板或静态 XML 遗漏的外文文本。\n• 实装【原文对照功能】：支援滑鼠悬停显示原文，方便进行双语对照。</ATC_UpdateLog_FullText>
   <ATC_ApiConfigTitle>API 接口弹匣设定 (支援多组并发轮询)</ATC_ApiConfigTitle>
   <ATC_Provider>供应商</ATC_Provider>
   <ATC_CustomUrlOptional>(自定义 BaseUrl，留空使用预设)</ATC_CustomUrlOptional>
@@ -101,6 +101,42 @@
   <ATC_MultiSelect_Title>选择要翻译的模组 (可多选)</ATC_MultiSelect_Title>
   <ATC_MultiSelect_Search>在此输入模组名称来搜寻...</ATC_MultiSelect_Search>
   <ATC_MultiSelect_Start>开始翻译已勾选的 {0} 个模组</ATC_MultiSelect_Start>
+  <ATC_PolicyShadowRun_Button>Agent 分类试跑（{0}）</ATC_PolicyShadowRun_Button>
+  <ATC_PolicyShadowRun_Task>正在执行 Agent 分类试跑...</ATC_PolicyShadowRun_Task>
+  <ATC_PolicyShadowRun_Start>开始分析已选择的 {0} 个模组；不会写入或注入翻译。</ATC_PolicyShadowRun_Start>
+  <ATC_PolicyShadowRun_Title>Agent 分类试跑结果</ATC_PolicyShadowRun_Title>
+  <ATC_PolicyShadowRun_Summary>模组：{0}\n候选文本：{1}\n允许：{2}\n拒绝：{3}\n模糊项：{4}\n群组：{5}\n预估请求：{6}\n预估输入 Token：{7}\n预估输出 Token：{8}\n预估 Token 总计：{9}\n实际 AI/API 调用／消耗 Token：0／0\n耗时：{10}\n报告：{11}\n翻译写入／运行时注入：0／0</ATC_PolicyShadowRun_Summary>
+  <ATC_PolicyAgent_Enable>启用 AI Policy Agent 判断模糊文本（默认关闭）</ATC_PolicyAgent_Enable>
+  <ATC_PolicyAgent_EnableTooltip>启用后会在翻译前判断模糊文本。DeepL 无法执行分类，请配置 AI 对话服务；判断失败时会保留原文。</ATC_PolicyAgent_EnableTooltip>
+  <ATC_PolicyAgent_MaxCallsPerRun>本次翻译任务的 Policy Agent 调用软性门槛：{0}</ATC_PolicyAgent_MaxCallsPerRun>
+  <ATC_PolicyAgent_MaxEstimatedTokensPerRun>本次翻译任务的预估 Token 软性门槛：{0}</ATC_PolicyAgent_MaxEstimatedTokensPerRun>
+  <ATC_PolicyAgent_MaxCallsPerMod>每个模组的 Policy Agent 调用软性门槛：{0}</ATC_PolicyAgent_MaxCallsPerMod>
+  <ATC_PolicyAgent_RetryNotice>每个请求最多重试 {0} 次；每次重试都会计入调用和预估 Token 软性门槛。</ATC_PolicyAgent_RetryNotice>
+  <ATC_PolicyAgent_ClearCache>清除 Policy Agent 判断缓存</ATC_PolicyAgent_ClearCache>
+  <ATC_PolicyAgent_CacheCleared>已清除 Policy Agent 判断缓存。</ATC_PolicyAgent_CacheCleared>
+  <ATC_PolicyAgent_CacheClearFailed>无法清除 Policy Agent 判断缓存。</ATC_PolicyAgent_CacheClearFailed>
+  <ATC_PolicyAgent_NoProvider>没有可用的 AI Policy Agent 服务。DeepL 无法分类文本；模糊文本将保留原文。</ATC_PolicyAgent_NoProvider>
+  <ATC_PolicyAgent_BudgetExhausted>Policy Agent 已在软性门槛停止；其余模糊文本将保留原文。</ATC_PolicyAgent_BudgetExhausted>
+  <ATC_PolicyAgent_BudgetPrompt_Title>Policy Agent 软性门槛确认</ATC_PolicyAgent_BudgetPrompt_Title>
+  <ATC_PolicyAgent_BudgetPrompt_Message>下一次 Policy Agent 请求将超过软性门槛。\n模组：{0}\n本次任务调用：{1} -&gt; {2}（门槛 {3}）；当前模组：{4} -&gt; {5}（门槛 {6}）\n预估 Token：{7} -&gt; {8}（门槛 {9}）{10}\n当前已发现、尚待处理的模糊群组：约 {11}\n请求类型：{12}\n选择继续后，本次任务不再询问；供应商额度与计费仍然有效。</ATC_PolicyAgent_BudgetPrompt_Message>
+  <ATC_PolicyAgent_BudgetPrompt_ReportedTokens>供应商当前已回报 Token（可能不完整）：{0}</ATC_PolicyAgent_BudgetPrompt_ReportedTokens>
+  <ATC_PolicyAgent_BudgetPrompt_RequestNew>新请求</ATC_PolicyAgent_BudgetPrompt_RequestNew>
+  <ATC_PolicyAgent_BudgetPrompt_RequestRetry>重试</ATC_PolicyAgent_BudgetPrompt_RequestRetry>
+  <ATC_PolicyAgent_BudgetPrompt_Continue>继续使用 Agent</ATC_PolicyAgent_BudgetPrompt_Continue>
+  <ATC_PolicyAgent_BudgetPrompt_LocalOnly>停用 Agent，继续翻译</ATC_PolicyAgent_BudgetPrompt_LocalOnly>
+  <ATC_PolicyAgent_BudgetPrompt_Cancel>取消本次翻译</ATC_PolicyAgent_BudgetPrompt_Cancel>
+  <ATC_PolicyAgent_BudgetPrompt_Waiting>等待 Policy Agent 软性门槛选择</ATC_PolicyAgent_BudgetPrompt_Waiting>
+  <ATC_PolicyAgent_BudgetPrompt_Notice>达到软性门槛时会暂停并询问；选择继续后，本次任务不再询问或应用内部软性门槛，但供应商额度与计费仍然有效。</ATC_PolicyAgent_BudgetPrompt_Notice>
+  <ATC_PolicyAgent_EmergencyLimitReached>Policy Agent 已达到技术安全护栏（{0} 次调用或 {1} 预估 Token）；本次任务后续将停用 Agent。</ATC_PolicyAgent_EmergencyLimitReached>
+  <ATC_PolicyAgent_LocalOnlySelected>已选择停用本次任务后续的 Policy Agent；模糊新文本将保留原文。</ATC_PolicyAgent_LocalOnlySelected>
+  <ATC_PolicyAgent_BatchSummary>Policy [{0}]：本地允许 {1}、本地拒绝 {2}、Agent 允许 {3}、保留原文 {4}。</ATC_PolicyAgent_BatchSummary>
+  <ATC_PolicyAgent_RunSummary>Policy Agent 摘要：调用 {0}、预估 Token {1}、缓存命中 {2}、本地允许 {3}、本地拒绝 {4}、Agent 允许 {5}、Agent 拒绝 {6}、待复查 {7}、未解决 {8}。</ATC_PolicyAgent_RunSummary>
+  <ATC_PolicyAgent_ActualTokenSummary>Policy Agent 供应商报告的实际 Token：{0}。</ATC_PolicyAgent_ActualTokenSummary>
+  <ATC_HardcodedUi_EnablePrototype>启用已批准的硬编码 UI 原型（仅测试模组）</ATC_HardcodedUi_EnablePrototype>
+  <ATC_HardcodedUi_EnablePrototypeTooltip>只使用人工批准的测试模组 manifest。运行期间不会扫描或修改第三方 DLL，默认关闭。</ATC_HardcodedUi_EnablePrototypeTooltip>
+  <ATC_HardcodedUi_Status>定向 UI 原型：{0}</ATC_HardcodedUi_Status>
+  <ATC_HardcodedUi_ReloadManifest>重新加载已批准的 UI manifest</ATC_HardcodedUi_ReloadManifest>
+  <ATC_HardcodedUi_Conflict>启用全局 UI 拦截时，定向原型会暂停。</ATC_HardcodedUi_Conflict>
   <ATC_SubTask_AnalyzingDict>正在分析本机汉化文本...</ATC_SubTask_AnalyzingDict>
   <ATC_SubTask_BuildingDict>建构字典中: {0}</ATC_SubTask_BuildingDict>
   <ATC_SubTask_DictDone>字典建置完成！</ATC_SubTask_DictDone>
@@ -639,4 +675,83 @@
   <ATC_Blacklist_DownloadSkipped>已跳过黑名单模组的云端下载：{0}</ATC_Blacklist_DownloadSkipped>
   <ATC_Blacklist_DownloadBlockedStatus>已禁止云端下载</ATC_Blacklist_DownloadBlockedStatus>
   <ATC_Cloud_Btn_BatchBestTip>只下载已启用且云端确实有对应翻译的模组；云端没有的模组会自动跳过。</ATC_Cloud_Btn_BatchBestTip>
+  <ATC_Unresolved_Title>未解决的翻译（{0}）</ATC_Unresolved_Title>
+  <ATC_Unresolved_TitleShort>未解决的翻译</ATC_Unresolved_TitleShort>
+  <ATC_Unresolved_Summary>这些词条未能安全完成翻译；可以重新发送给 AI、保留原文，或逐条手动编辑。</ATC_Unresolved_Summary>
+  <ATC_Unresolved_Search>搜索 Key、原文、原因或来源文件...</ATC_Unresolved_Search>
+  <ATC_Unresolved_Empty>目前没有未解决的翻译。</ATC_Unresolved_Empty>
+  <ATC_Unresolved_Mods>模组</ATC_Unresolved_Mods>
+  <ATC_Unresolved_Groups>类型 / 来源文件</ATC_Unresolved_Groups>
+  <ATC_Unresolved_Entries>词条（{0}）</ATC_Unresolved_Entries>
+  <ATC_Unresolved_All>全部</ATC_Unresolved_All>
+  <ATC_Unresolved_UnknownMod>未知模组</ATC_Unresolved_UnknownMod>
+  <ATC_Unresolved_UnknownSource>未知来源文件</ATC_Unresolved_UnknownSource>
+  <ATC_Unresolved_Attempts>已尝试：{0} 次</ATC_Unresolved_Attempts>
+  <ATC_Unresolved_Manual>手动编辑</ATC_Unresolved_Manual>
+  <ATC_Unresolved_SelectVisible>勾选当前项目</ATC_Unresolved_SelectVisible>
+  <ATC_Unresolved_ClearSelection>清除勾选</ATC_Unresolved_ClearSelection>
+  <ATC_Unresolved_Selected>已选：{0}</ATC_Unresolved_Selected>
+  <ATC_Unresolved_KeepOriginal>保留原文 / 忽略</ATC_Unresolved_KeepOriginal>
+  <ATC_Unresolved_RetryAI>重新发送给 AI</ATC_Unresolved_RetryAI>
+  <ATC_Unresolved_NoSelection>请先勾选至少一个词条。</ATC_Unresolved_NoSelection>
+  <ATC_Unresolved_Running>请等待当前翻译任务完成。</ATC_Unresolved_Running>
+  <ATC_Unresolved_ConfirmIgnore>要让选中的 {0} 个词条保留原文，并在来源未变化时不再发送给 AI 吗？</ATC_Unresolved_ConfirmIgnore>
+  <ATC_Unresolved_ConfirmButton>保留原文</ATC_Unresolved_ConfirmButton>
+  <ATC_Unresolved_IgnoreDone>已让 {0} 个词条保留原文。</ATC_Unresolved_IgnoreDone>
+  <ATC_Unresolved_ModNotFound>找不到已安装的模组：{0}</ATC_Unresolved_ModNotFound>
+  <ATC_Unresolved_RetryDone>AI 重试已解决 {0} / {1} 个词条。</ATC_Unresolved_RetryDone>
+  <ATC_Unresolved_WrongLanguage>这个词条属于 {0} 目标语言；请先切换回该目标语言再处理。</ATC_Unresolved_WrongLanguage>
+  <ATC_Unresolved_SourceChanged>{0} 的来源文本已变化或消失；请先重新扫描该模组。</ATC_Unresolved_SourceChanged>
+  <ATC_Unresolved_IgnoreSaveFailed>无法保存保留原文的决定；此词条仍会保留在待处理列表。</ATC_Unresolved_IgnoreSaveFailed>
+  <ATC_Unresolved_ReasonApi>API 请求失败</ATC_Unresolved_ReasonApi>
+  <ATC_Unresolved_ReasonMalformed>AI 返回格式不合法</ATC_Unresolved_ReasonMalformed>
+  <ATC_Unresolved_ReasonEmpty>AI 返回空白内容</ATC_Unresolved_ReasonEmpty>
+  <ATC_Unresolved_ReasonEnglish>结果仍残留英文</ATC_Unresolved_ReasonEnglish>
+  <ATC_Unresolved_ReasonVariant>简繁体版本不符</ATC_Unresolved_ReasonVariant>
+  <ATC_Unresolved_ReasonWrongLanguage>结果使用了错误的目标语言</ATC_Unresolved_ReasonWrongLanguage>
+  <ATC_Unresolved_ReasonToken>受保护符号不一致</ATC_Unresolved_ReasonToken>
+  <ATC_Unresolved_ReasonFormat>格式参数不一致</ATC_Unresolved_ReasonFormat>
+  <ATC_Unresolved_ReasonTitleTag>标题标签不一致</ATC_Unresolved_ReasonTitleTag>
+  <ATC_Unresolved_ReasonSave>无法保存翻译文件</ATC_Unresolved_ReasonSave>
+  <ATC_Unresolved_ReasonSource>无法处理来源 XML</ATC_Unresolved_ReasonSource>
+  <ATC_Unresolved_ReasonPolicyReview>Policy Agent 要求人工复核</ATC_Unresolved_ReasonPolicyReview>
+  <ATC_Unresolved_ReasonPolicyAgentFailure>Policy Agent 判断失败</ATC_Unresolved_ReasonPolicyAgentFailure>
+  <ATC_Unresolved_ReasonUnknown>翻译结果未通过验证</ATC_Unresolved_ReasonUnknown>
+  <ATC_PolicyAgent_ApiTitle>Policy Agent 专用 API 设置</ATC_PolicyAgent_ApiTitle>
+  <ATC_PolicyAgent_ApiNotice>在此设置独立的供应商、Key、Base URL 和模型；Policy Agent 不会使用翻译 API 列表。</ATC_PolicyAgent_ApiNotice>
+  <ATC_PolicyAgent_ApiEnabled>启用这组 Agent 专用 API 设置</ATC_PolicyAgent_ApiEnabled>
+  <ATC_PolicyAgent_ApiReady>Agent 专用 API 已准备完成。</ATC_PolicyAgent_ApiReady>
+  <ATC_PolicyAgent_ApiIncomplete>Agent 专用 API 尚未完整设置；Policy Agent 不会使用翻译 API Key。</ATC_PolicyAgent_ApiIncomplete>
+  <ATC_FilteredModsButton>已过滤 {0} 个模组｜强制纳入 {1} 个</ATC_FilteredModsButton>
+  <ATC_Filtered_Title>模组过滤明细（{0}）</ATC_Filtered_Title>
+  <ATC_Filtered_Summary>查看模组全部或部分来源未纳入翻译的原因。已强制纳入：{0} 个。</ATC_Filtered_Summary>
+  <ATC_Filtered_Search>搜索模组、Package ID、原因或路径...</ATC_Filtered_Search>
+  <ATC_Filtered_Refreshing>正在重新检查模组：{0} / {1}</ATC_Filtered_Refreshing>
+  <ATC_Filtered_OpenFolder>打开文件夹</ATC_Filtered_OpenFolder>
+  <ATC_Filtered_OpenFolderTip>在文件资源管理器中打开该模组的根目录。</ATC_Filtered_OpenFolderTip>
+  <ATC_Filtered_ForceInclude>强制纳入</ATC_Filtered_ForceInclude>
+  <ATC_Filtered_CancelForce>取消强制</ATC_Filtered_CancelForce>
+  <ATC_Filtered_ForceTip>使用已找到但未被普通扫描采用的 Defs / Languages 来源。</ATC_Filtered_ForceTip>
+  <ATC_Filtered_ForceUnavailableTip>没有可识别的 Defs 或 Languages XML，无法强制翻译。</ATC_Filtered_ForceUnavailableTip>
+  <ATC_Filtered_ForceTitle>强制纳入翻译</ATC_Filtered_ForceTitle>
+  <ATC_Filtered_ForceWarning>要强制纳入“{0}”吗？
+
+找到的 XML 不一定会被 RimWorld 实际加载，可能属于旧版本或无效内容。这会增加翻译时间和 Token 消耗，生成的翻译也可能不会在游戏中生效。</ATC_Filtered_ForceWarning>
+  <ATC_Filtered_ForceConfirm>仍要强制纳入</ATC_Filtered_ForceConfirm>
+  <ATC_Filtered_ForceEnabled>已强制纳入该模组；重新检查后会出现在翻译列表中。</ATC_Filtered_ForceEnabled>
+  <ATC_Filtered_ForceDisabled>已取消该模组的强制纳入。</ATC_Filtered_ForceDisabled>
+  <ATC_Filtered_FolderMissing>模组文件夹不存在或已被移动。</ATC_Filtered_FolderMissing>
+  <ATC_Filtered_FolderOpenFailed>无法打开模组文件夹：{0}</ATC_Filtered_FolderOpenFailed>
+  <ATC_Filtered_ReasonTool>工具本体或翻译包，不会翻译自身</ATC_Filtered_ReasonTool>
+  <ATC_Filtered_ReasonTranslationPatch>判定为其他模组的翻译补丁</ATC_Filtered_ReasonTranslationPatch>
+  <ATC_Filtered_ReasonBlacklist>已加入玩家的翻译黑名单</ATC_Filtered_ReasonBlacklist>
+  <ATC_Filtered_ReasonMissingRoot>模组根目录不存在</ATC_Filtered_ReasonMissingRoot>
+  <ATC_Filtered_ReasonUnsupportedLayout>找到了来源，但不在 RimWorld 当前加载的内容路径中</ATC_Filtered_ReasonUnsupportedLayout>
+  <ATC_Filtered_ReasonPartialSources>部分 Defs 或 Languages 来源不在 RimWorld 当前启用的内容路径中</ATC_Filtered_ReasonPartialSources>
+  <ATC_Filtered_ReasonNoSources>找不到包含 XML 的 Defs 或 Languages 来源</ATC_Filtered_ReasonNoSources>
+  <ATC_Filtered_ReasonForceIncluded>已由玩家强制纳入翻译</ATC_Filtered_ReasonForceIncluded>
+  <ATC_Filtered_ReasonScanFailed>检查模组时发生错误：{0}</ATC_Filtered_ReasonScanFailed>
+  <ATC_Filtered_NoCandidatePaths>没有找到可用的来源路径</ATC_Filtered_NoCandidatePaths>
+  <ATC_Filtered_CandidatePaths>候选来源：{0}</ATC_Filtered_CandidatePaths>
+  <ATC_Filtered_CandidateHeader>找到的候选来源：</ATC_Filtered_CandidateHeader>
 </LanguageData>

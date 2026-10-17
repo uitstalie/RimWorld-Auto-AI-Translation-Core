@@ -42,6 +42,8 @@ namespace AutoTranslator_Core
         private static long _nextActiveModCountCheckUtcTicks = 0L;
         private static bool _validModsCacheRefreshInFlight = false;
         private static int _validModsCacheGeneration = 0;
+        private static int _validModsFilterSettingsRevision = 0;
+        private static int _validModsCacheAppliedSettingsRevision = -1;
         private static int _validModsCacheVersion = 0;
         private static int _validModsCacheProgressCurrent = 0;
         private static int _validModsCacheProgressTotal = 0;
@@ -134,6 +136,8 @@ namespace AutoTranslator_Core
 
         private static void QueueValidModsCacheRefreshIfNeeded()
         {
+            if (_validModsCacheRefreshInFlight) return;
+
             long nowTicks = DateTime.UtcNow.Ticks;
             if (_cachedValidMods != null && nowTicks < _nextActiveModCountCheckUtcTicks)
             {
@@ -151,13 +155,8 @@ namespace AutoTranslator_Core
                 return;
             }
 
-            if (_validModsCacheRefreshInFlight &&
-                string.Equals(_pendingActiveModSignature, signature, StringComparison.Ordinal))
-            {
-                return;
-            }
-
             int generation = ++_validModsCacheGeneration;
+            int settingsRevision = _validModsFilterSettingsRevision;
             _validModsCacheRefreshInFlight = true;
             _pendingActiveModSignature = signature;
             _validModsCacheProgressCurrent = 0;
@@ -167,6 +166,7 @@ namespace AutoTranslator_Core
             Task.Run(() =>
             {
                 List<ModMetaData> validMods = new List<ModMetaData>();
+                List<FilteredModInfo> filteredMods = new List<FilteredModInfo>();
                 string error = null;
 
                 try
@@ -177,13 +177,15 @@ namespace AutoTranslator_Core
                         _validModsCacheProgressCurrent = i;
                         _validModsCacheProgressModName = snapshot != null ? snapshot.Name ?? "" : "";
 
-                        if (snapshot != null &&
-                            !ShouldSkipValidModPackage(snapshot.PackageId) &&
-                            snapshot.Mod != null &&
-                            (AutoTranslatorScanner.IsOfficialBaseGameOrDlcPackage(snapshot.PackageId) ||
-                             AutoTranslatorScanner.HasScannableTranslationSources(snapshot.PackageId, snapshot.RootDir)))
+                        bool includeInValidMods;
+                        FilteredModInfo filteredInfo = EvaluateModFilter(snapshot, out includeInValidMods);
+                        if (includeInValidMods && snapshot != null && snapshot.Mod != null)
                         {
                             validMods.Add(snapshot.Mod);
+                        }
+                        if (filteredInfo != null)
+                        {
+                            filteredMods.Add(filteredInfo);
                         }
                     }
 
@@ -191,6 +193,10 @@ namespace AutoTranslator_Core
                     _validModsCacheProgressModName = "";
                     validMods = validMods
                         .OrderBy(m => m.Name ?? "", StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                    filteredMods = filteredMods
+                        .OrderByDescending(info => info.IsFiltered)
+                        .ThenBy(info => info.Name ?? "", StringComparer.OrdinalIgnoreCase)
                         .ToList();
                 }
                 catch (Exception ex)
@@ -215,8 +221,11 @@ namespace AutoTranslator_Core
                     }
 
                     _cachedValidMods = validMods ?? new List<ModMetaData>();
+                    _cachedFilteredMods = filteredMods ?? new List<FilteredModInfo>();
+                    AutoTranslatorSettings.FilteredModsCount = _cachedFilteredMods.Count(info => info.IsFiltered);
                     _lastActiveModCount = activeCount;
                     _lastActiveModSignature = signature;
+                    _validModsCacheAppliedSettingsRevision = settingsRevision;
                     _validModsCacheVersion++;
                     _cachedCloudDisplayMods = null;
                     _cachedCloudLocalModMap = null;
@@ -252,7 +261,7 @@ namespace AutoTranslator_Core
                 });
             }
 
-            signature = activeCount + ":" + signatureBuilder;
+            signature = activeCount + ":settings=" + _validModsFilterSettingsRevision + ":" + signatureBuilder;
             return snapshots;
         }
 
@@ -276,6 +285,13 @@ namespace AutoTranslator_Core
             if (Settings.ApiConfigs == null || Settings.ApiConfigs.Count == 0)
             {
                 Settings.ApiConfigs = new List<ApiKeyConfig> { new ApiKeyConfig() };
+            }
+            if (Settings.PolicyAgentApiConfig == null)
+            {
+                Settings.PolicyAgentApiConfig = new ApiKeyConfig
+                {
+                    Label = "Policy Agent"
+                };
             }
 
             TryAutoSyncLanguageWithGame(resetCaches: false, log: false, writeSettings: true);
@@ -314,6 +330,7 @@ namespace AutoTranslator_Core
                 case TargetLanguage.Polish: return "ATC_Lang_Polish".Translate();
                 case TargetLanguage.Portuguese: return "ATC_Lang_Portuguese".Translate();
                 case TargetLanguage.Turkish: return "ATC_Lang_Turkish".Translate();
+                case TargetLanguage.Thai: return "ATC_Lang_Thai".Translate();
                 default: return lang.ToString();
             }
         }
@@ -339,6 +356,11 @@ namespace AutoTranslator_Core
         {
             bool changed = Settings.TargetLang != targetLang;
 
+            if (changed)
+            {
+                UIInterceptor.PrepareForLanguageChange();
+            }
+
             Settings.TargetLang = targetLang;
             Settings.CloudTargetLang = targetLang;
             if (manualSelection) Settings.HasManualTargetLanguage = true;
@@ -357,6 +379,7 @@ namespace AutoTranslator_Core
         {
             ResetCloudFetchStateForLanguageChange();
             UIInterceptor.ReloadForLanguageChange();
+            TargetedHardcodedUi.HardcodedUiTargetedPatchManager.RequestReload();
             ModNameTranslationCache.Clear();
             ModUpdateDetector.ClearStatusCache();
             TranslationWorkbenchTab.RequestRefresh();
@@ -370,6 +393,11 @@ namespace AutoTranslator_Core
             if (Settings == null || Settings.HasManualTargetLanguage) return false;
             if (!TryGetTargetLanguageFromActiveGameLanguage(out TargetLanguage detectedLang, out string activeFolder)) return false;
             if (Settings.TargetLang == detectedLang && Settings.CloudTargetLang == detectedLang) return false;
+
+            if (resetCaches)
+            {
+                UIInterceptor.PrepareForLanguageChange();
+            }
 
             Settings.TargetLang = detectedLang;
             Settings.CloudTargetLang = detectedLang;
@@ -419,6 +447,7 @@ namespace AutoTranslator_Core
                 case "Polish": targetLang = TargetLanguage.Polish; return true;
                 case "PortugueseBrazilian": targetLang = TargetLanguage.Portuguese; return true;
                 case "Turkish": targetLang = TargetLanguage.Turkish; return true;
+                case "Thai": targetLang = TargetLanguage.Thai; return true;
                 case "English": targetLang = TargetLanguage.English; return true;
                 default: return false;
             }
@@ -521,6 +550,30 @@ namespace AutoTranslator_Core
             });
         }
 
+        internal static void ReplaceCloudRegistryAfterRecovery(
+            List<CloudModRecord> records,
+            string packageId,
+            CloudModRecord selectedRecord)
+        {
+            if (records == null) return;
+            ATC_Dispatcher.RunOnMainThread(() =>
+            {
+                AutoTranslatorSettings.CloudRegistry = records;
+                AutoTranslatorSettings.HasFetchedCloudThisSession = true;
+                AutoTranslatorSettings.CloudConnectionFailed = false;
+                AutoTranslatorSettings.CloudFetchGeneration++;
+                if (!string.IsNullOrWhiteSpace(packageId) && selectedRecord != null)
+                {
+                    AutoTranslatorSettings.SelectedCloudVersion[packageId] = selectedRecord;
+                }
+                _cachedCloudLookup = null;
+                _singleCorrectionCountCache.Clear();
+                _singleCorrectionCountFetchInFlight.Clear();
+                _lastCloudRegistryCount = -1;
+                _lastCloudLangFolder = string.Empty;
+            });
+        }
+
         // 這個方法負責確保 雲端取得StartedForActive分頁 已準備完成。
         // EN: This method ensures cloud fetch started for active tab is ready.
         private static void EnsureCloudFetchStartedForActiveTab()
@@ -546,7 +599,14 @@ namespace AutoTranslator_Core
                 if (AutoTranslatorSettings.ShowFinishPopup)
                 {
                     AutoTranslatorSettings.ShowFinishPopup = false;
-                    Find.WindowStack.Add(new Dialog_MessageBox("ATC_FinishMessage_Text".Translate(), "ATC_FinishMessage_OK".Translate(), null, null, null, "ATC_FinishMessage_Title".Translate()));
+                    if (TranslationUnresolvedManager.HasPending)
+                    {
+                        Find.WindowStack.Add(new Window_UnresolvedTranslations());
+                    }
+                    else
+                    {
+                        Find.WindowStack.Add(new Dialog_MessageBox("ATC_FinishMessage_Text".Translate(), "ATC_FinishMessage_OK".Translate(), null, null, null, "ATC_FinishMessage_Title".Translate()));
+                    }
                 }
 
 

@@ -89,38 +89,16 @@ namespace AutoTranslator_Core
         // EN: This method gets base URL.
         private static string GetBaseUrl(ApiKeyConfig config)
         {
-            string custom = CleanInput(config.CustomBaseUrl);
-            if (!string.IsNullOrEmpty(custom))
-            {
-
-                if (!custom.StartsWith("http://") && !custom.StartsWith("https://"))
-                    custom = "http://" + custom;
-
-                if (Uri.TryCreate(custom, UriKind.Absolute, out Uri validUri))
-                {
-
-                    string cleanUrl = validUri.AbsoluteUri.TrimEnd('/');
-
-
-                    if (cleanUrl.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cleanUrl = cleanUrl.Substring(0, cleanUrl.Length - 17);
-                    }
-                    else if (cleanUrl.EndsWith("/models", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cleanUrl = cleanUrl.Substring(0, cleanUrl.Length - 7);
-                    }
-
-
-                    return cleanUrl;
-                }
-                else
-                {
-
-                    Log.Warning($"[AutoTranslationCore] " + "ATC_Warning_InvalidUrlFallback".Translate(custom));
-                    return custom;
-                }
-            }
+            string custom;
+            string errorKey;
+            if (!ApiEndpointRules.TryNormalize(config.CustomBaseUrl, CleanInput(config.Key), out custom, out errorKey))
+                throw new InvalidOperationException(TranslateText(errorKey));
+            string fingerprint = AutoTranslatorAPI.GetModelFetchFingerprint(config);
+            if (!string.IsNullOrEmpty(config.ResolvedBaseUrl) && config.ResolvedBaseUrlFingerprint == fingerprint)
+                return config.ResolvedBaseUrl;
+            if (config.Provider == TranslatorProvider.Custom_OpenAI && config.UsePlayer2Protocol)
+                return Player2LocalApi.NormalizeBaseUrl(custom);
+            if (!string.IsNullOrEmpty(custom)) return AppendCustomV1(custom, config.Provider == TranslatorProvider.Custom_OpenAI);
 
             if (config.Provider == TranslatorProvider.DeepL)
             {
@@ -135,6 +113,62 @@ namespace AutoTranslator_Core
                 return def.BaseUrl;
             }
             return "https://api.openai.com/v1";
+        }
+
+        private static string AppendCustomV1(string baseUrl, bool customOpenAi)
+        {
+            if (!customOpenAi || baseUrl.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)) return baseUrl;
+            return baseUrl.TrimEnd('/') + "/v1";
+        }
+
+        public static string GetAlternateCustomBaseUrl(ApiKeyConfig config, string currentBaseUrl)
+        {
+            if (config == null || config.Provider != TranslatorProvider.Custom_OpenAI || config.UsePlayer2Protocol)
+                return string.Empty;
+            string normalized = (currentBaseUrl ?? string.Empty).TrimEnd('/');
+            if (!normalized.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)) return string.Empty;
+            return normalized.Substring(0, normalized.Length - 3).TrimEnd('/');
+        }
+
+        public static void RememberResolvedBaseUrl(ApiKeyConfig config, string baseUrl)
+        {
+            if (config == null || string.IsNullOrEmpty(baseUrl)) return;
+            config.ResolvedBaseUrl = baseUrl.TrimEnd('/');
+            config.ResolvedBaseUrlFingerprint = AutoTranslatorAPI.GetModelFetchFingerprint(config);
+        }
+
+        public static string GetApiEndpointError(ApiKeyConfig config)
+        {
+            if (config == null) return ApiEndpointRules.InvalidUrl;
+            string normalized;
+            string errorKey;
+            ApiEndpointRules.TryNormalize(config.CustomBaseUrl, CleanInput(config.Key), out normalized, out errorKey);
+            if (!string.IsNullOrEmpty(errorKey)) return errorKey;
+            if (config.Provider == TranslatorProvider.Custom_OpenAI && config.UsePlayer2Protocol)
+            {
+                Uri endpoint = new Uri(Player2LocalApi.NormalizeBaseUrl(normalized));
+                string clientId;
+                if (!Player2LocalApi.TryGetGameClientId(config.Player2GameClientId, out clientId))
+                    return "ATC_Player2_ClientIdRequired";
+            }
+            return errorKey;
+        }
+
+        public static bool HasApiCredential(ApiKeyConfig config)
+        {
+            if (config == null || !string.IsNullOrEmpty(GetApiEndpointError(config))) return false;
+            if (config.Provider == TranslatorProvider.Custom_OpenAI && config.UsePlayer2Protocol) return true;
+            return !string.IsNullOrEmpty(CleanInput(config.Key)) ||
+                   (config.Provider == TranslatorProvider.Custom_OpenAI &&
+                    !string.IsNullOrWhiteSpace(config.CustomBaseUrl));
+        }
+
+        private static bool ValidateApiEndpointForRequest(ApiKeyConfig config)
+        {
+            string errorKey = GetApiEndpointError(config);
+            if (string.IsNullOrEmpty(errorKey)) return true;
+            AutoTranslatorSettings.AddErrorLog(TranslateText(errorKey));
+            return false;
         }
 
         // 這個方法負責清理並標準化 Input 內容。

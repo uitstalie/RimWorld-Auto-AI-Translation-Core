@@ -30,6 +30,17 @@ namespace AutoTranslator_Core
         // 這個欄位保存 MaxThreads 的執行狀態或快取資料。
         // EN: This field stores max threads runtime state or cached data.
         public int MaxThreads = 3;
+        public bool EnableTranslationPolicyAgent = false;
+        public int PolicyAgentMaxCallsPerRun = 20;
+        public long PolicyAgentMaxEstimatedTokensPerRun = 200000L;
+        public int PolicyAgentMaxCallsPerMod = 20;
+        public int PolicyAgentMaxRetriesPerRequest = 1;
+        // This configuration is intentionally separate from the translation key pool so
+        // policy classification can use a cheaper or otherwise independent model.
+        public ApiKeyConfig PolicyAgentApiConfig = new ApiKeyConfig
+        {
+            Label = "Policy Agent"
+        };
         public List<ApiKeyConfig> ApiConfigs = new List<ApiKeyConfig>();
 
         // 這個欄位保存 CurrentProgress 的執行狀態或快取資料。
@@ -103,6 +114,8 @@ namespace AutoTranslator_Core
         // 這個欄位保存 EnableUINew翻譯 的執行狀態或快取資料。
         // EN: This field stores enable UI new translation runtime state or cached data.
         public bool EnableUINewTranslation = true;
+        // This opt-in prototype only applies explicitly approved targeted patches.
+        public bool EnableHardcodedUiPrototype = false;
         // 這個欄位保存 EnableUIErrorLogInterception 的執行狀態或快取資料。
         // EN: This field stores enable UI error log interception runtime state or cached data.
         public bool EnableUIErrorLogInterception = false;
@@ -186,6 +199,10 @@ namespace AutoTranslator_Core
         public Dictionary<string, string> ModLastVerifiedFingerprints = new Dictionary<string, string>();
         public List<string> TranslationBlacklist = new List<string>();
         public List<string> CloudDownloadBlacklist = new List<string>();
+        public List<string> ForceTranslationPackages = new List<string>();
+        public List<string> CloudTranslationPriority = new List<string>();
+        public List<string> UITranslationModBlacklist = new List<string>();
+        public int CloudBatchDownloadConcurrency = 3;
         private static readonly object PackageBlacklistLock = new object();
 
         // 這個欄位保存 Filtered模組Count 的執行狀態或快取資料。
@@ -252,6 +269,7 @@ namespace AutoTranslator_Core
         public void SetTranslationBlacklisted(string packageId, bool blocked)
         {
             SetPackageIdBlocked(TranslationBlacklist, packageId, blocked);
+            AutoTranslatorMod.InvalidateValidModsCache();
         }
 
         public void SetCloudDownloadBlacklisted(string packageId, bool blocked)
@@ -266,6 +284,30 @@ namespace AutoTranslator_Core
                 TranslationBlacklist.Clear();
                 CloudDownloadBlacklist.Clear();
             }
+            AutoTranslatorMod.InvalidateValidModsCache();
+        }
+
+        public bool IsForceTranslationEnabled(string packageId)
+        {
+            return ContainsPackageId(ForceTranslationPackages, packageId);
+        }
+
+        public void SetForceTranslationEnabled(string packageId, bool enabled)
+        {
+            SetPackageIdBlocked(ForceTranslationPackages, packageId, enabled);
+            AutoTranslatorMod.InvalidateValidModsCache();
+            ModUpdateDetector.ClearStatusCache();
+        }
+
+        public bool IsUiTranslationModBlacklisted(string packageId)
+        {
+            return ContainsPackageId(UITranslationModBlacklist, packageId);
+        }
+
+        public void SetUiTranslationModBlacklisted(string packageId, bool blocked)
+        {
+            SetPackageIdBlocked(UITranslationModBlacklist, packageId, blocked);
+            UIInterceptor.RefreshRuntimeUICache();
         }
 
         private static bool ContainsPackageId(List<string> packageIds, string packageId)
@@ -299,6 +341,16 @@ namespace AutoTranslator_Core
                     .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
                     .ToList();
             }
+        }
+
+        private static void NormalizeOrderedPackageIdList(ref List<string> packageIds)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            packageIds = (packageIds ?? new List<string>())
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id.Trim().ToLowerInvariant())
+                .Where(id => seen.Add(id))
+                .ToList();
         }
 
         // 這個方法負責處理 AddLog 相關流程。
@@ -394,11 +446,22 @@ namespace AutoTranslator_Core
             Scribe_Values.Look(ref OnlyScanActiveMods, "OnlyScanActiveMods", true);
             Scribe_Values.Look(ref EnableUIInterceptor, "EnableUIInterceptor", false);
             Scribe_Values.Look(ref EnableUINewTranslation, "EnableUINewTranslation", true);
+            Scribe_Values.Look(ref EnableHardcodedUiPrototype, "EnableHardcodedUiPrototype", false);
             Scribe_Values.Look(ref EnableUIErrorLogInterception, "EnableUIErrorLogInterception", false);
             Scribe_Values.Look(ref TranslateWorkbenchModNames, "TranslateWorkbenchModNames", false);
             Scribe_Values.Look(ref ShowWorldMainButton, "ShowWorldMainButton", true);
             Scribe_Values.Look(ref MaxThreads, "MaxThreads", 3);
+            Scribe_Values.Look(ref EnableTranslationPolicyAgent, "EnableTranslationPolicyAgent", false);
+            Scribe_Values.Look(ref PolicyAgentMaxCallsPerRun, "PolicyAgentMaxCallsPerRun", 20);
+            Scribe_Values.Look(ref PolicyAgentMaxEstimatedTokensPerRun, "PolicyAgentMaxEstimatedTokensPerRun", 200000L);
+            Scribe_Values.Look(ref PolicyAgentMaxCallsPerMod, "PolicyAgentMaxCallsPerMod", 20);
+            Scribe_Values.Look(ref PolicyAgentMaxRetriesPerRequest, "PolicyAgentMaxRetriesPerRequest", 1);
+            PolicyAgentMaxCallsPerRun = Math.Min(20, Math.Max(0, PolicyAgentMaxCallsPerRun));
+            PolicyAgentMaxEstimatedTokensPerRun = Math.Min(200000L, Math.Max(0L, PolicyAgentMaxEstimatedTokensPerRun));
+            PolicyAgentMaxCallsPerMod = Math.Min(20, Math.Max(0, PolicyAgentMaxCallsPerMod));
+            PolicyAgentMaxRetriesPerRequest = Math.Min(1, Math.Max(0, PolicyAgentMaxRetriesPerRequest));
             Scribe_Values.Look(ref ShowOriginalUI, "ShowOriginalUI", false);
+            Scribe_Deep.Look(ref PolicyAgentApiConfig, "PolicyAgentApiConfig");
             Scribe_Collections.Look(ref ApiConfigs, "ApiConfigs", LookMode.Deep);
             Scribe_Values.Look(ref TotalCharCount, "TotalCharCount", 0L);
 
@@ -409,8 +472,16 @@ namespace AutoTranslator_Core
             if (ModLastVerifiedFingerprints == null) ModLastVerifiedFingerprints = new Dictionary<string, string>();
             Scribe_Collections.Look(ref TranslationBlacklist, "TranslationBlacklist", LookMode.Value);
             Scribe_Collections.Look(ref CloudDownloadBlacklist, "CloudDownloadBlacklist", LookMode.Value);
+            Scribe_Collections.Look(ref ForceTranslationPackages, "ForceTranslationPackages", LookMode.Value);
+            Scribe_Collections.Look(ref CloudTranslationPriority, "CloudTranslationPriority", LookMode.Value);
+            Scribe_Collections.Look(ref UITranslationModBlacklist, "UITranslationModBlacklist", LookMode.Value);
             NormalizePackageIdList(ref TranslationBlacklist);
             NormalizePackageIdList(ref CloudDownloadBlacklist);
+            NormalizePackageIdList(ref ForceTranslationPackages);
+            NormalizeOrderedPackageIdList(ref CloudTranslationPriority);
+            NormalizePackageIdList(ref UITranslationModBlacklist);
+            Scribe_Values.Look(ref CloudBatchDownloadConcurrency, "CloudBatchDownloadConcurrency", 3);
+            CloudBatchDownloadConcurrency = Math.Max(1, Math.Min(4, CloudBatchDownloadConcurrency));
 
             Scribe_Values.Look(ref TimeoutSeconds, "TimeoutSeconds", 60);
 
@@ -436,6 +507,14 @@ namespace AutoTranslator_Core
                 if (ApiConfigs == null || ApiConfigs.Count == 0)
                 {
                     ApiConfigs = new List<ApiKeyConfig> { new ApiKeyConfig() };
+                }
+
+                if (PolicyAgentApiConfig == null)
+                {
+                    PolicyAgentApiConfig = new ApiKeyConfig
+                    {
+                        Label = "Policy Agent"
+                    };
                 }
 
                 if (ExportHistory == null) ExportHistory = new List<string>();

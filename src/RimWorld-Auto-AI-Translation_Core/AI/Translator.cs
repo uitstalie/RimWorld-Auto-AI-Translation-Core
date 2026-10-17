@@ -27,7 +27,9 @@ namespace AutoTranslator_Core
         static AutoTranslatorAPI()
         {
 
+#if !RIMWORLD_1_7
             System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
+#endif
 
 
         }
@@ -61,7 +63,8 @@ namespace AutoTranslator_Core
             { TargetLanguage.Italian, new LangRule { Name = "Italian (Italiano)", Specifics = "1. Style: Use natural Italian suitable for the RimWorld gaming atmosphere.\n" }},
             { TargetLanguage.Polish, new LangRule { Name = "Polish (Polski)", Specifics = "1. Style: Use natural Polish suitable for the RimWorld gaming atmosphere.\n" }},
             { TargetLanguage.Portuguese, new LangRule { Name = "Brazilian Portuguese (Português do Brasil)", Specifics = "1. Style: Use natural Brazilian Portuguese suitable for the RimWorld gaming atmosphere.\n" }},
-            { TargetLanguage.Turkish, new LangRule { Name = "Turkish (Türkçe)", Specifics = "1. Style: Use natural Turkish suitable for the RimWorld gaming atmosphere.\n" }}
+            { TargetLanguage.Turkish, new LangRule { Name = "Turkish (Türkçe)", Specifics = "1. Style: Use natural Turkish suitable for the RimWorld gaming atmosphere.\n" }},
+            { TargetLanguage.Thai, new LangRule { Name = "Thai (ภาษาไทย, th-TH)", Specifics = "1. Style: Use natural Thai suitable for the RimWorld gaming atmosphere. Keep established game terminology consistent and avoid transliterating proper nouns unless Thai players commonly do so.\n" }}
         };
 
 
@@ -86,8 +89,9 @@ namespace AutoTranslator_Core
         {
             return config != null &&
                    config.Enabled &&
-                   !string.IsNullOrEmpty(config.Key) &&
-                   !string.IsNullOrEmpty(config.SelectedModel);
+                   HasApiCredential(config) &&
+                   ((config.Provider == TranslatorProvider.Custom_OpenAI && config.UsePlayer2Protocol) ||
+                    !string.IsNullOrEmpty(CleanInput(config.SelectedModel)));
         }
 
         // 這個方法負責判斷 HasAnyReady設定 條件是否成立。
@@ -142,24 +146,6 @@ namespace AutoTranslator_Core
             };
         }
 
-        // 這個方法負責處理 WaitFor翻譯回應Async 相關流程。
-        // EN: This method handles wait for translation response async.
-        private static async Task<bool> WaitForTranslationResponseAsync(Task<ATC_WebResponse> responseTask, int timeoutSeconds)
-        {
-            int timeoutMs = Math.Max(1, timeoutSeconds) * 1000;
-            System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-
-            while (!responseTask.IsCompleted)
-            {
-                if (AutoTranslatorSettings.IsCancellationRequested) return false;
-                if (timer.ElapsedMilliseconds >= timeoutMs) return false;
-
-                await Task.Delay(100);
-            }
-
-            return true;
-        }
-
         // 這個方法負責翻譯 BatchAsync 內容。
         // EN: This method translates batch async.
         public static async Task<List<string>> TranslateBatchAsync(List<string> texts, ApiKeyConfig forceConfig = null, bool suppressFinalParseError = false)
@@ -168,9 +154,12 @@ namespace AutoTranslator_Core
 
             ApiKeyConfig targetConfig = forceConfig ?? GetNextConfig();
             if (targetConfig == null) return null;
+            if (!ValidateApiEndpointForRequest(targetConfig)) return null;
+            if (!IsConfigReady(targetConfig)) return null;
 
             string apiKey = CleanInput(targetConfig.Key);
-            string model = CleanInput(targetConfig.SelectedModel);
+            bool isPlayer2 = targetConfig.Provider == TranslatorProvider.Custom_OpenAI && targetConfig.UsePlayer2Protocol;
+            string model = isPlayer2 ? "" : CleanInput(targetConfig.SelectedModel);
             string baseUrl = GetBaseUrl(targetConfig);
 
             try
@@ -220,6 +209,8 @@ namespace AutoTranslator_Core
                         payload = new { model = string.IsNullOrEmpty(model) ? "local-model" : model, messages = new[] { new { role = "system", content = prompt }, new { role = "user", content = inputJson } }, max_tokens = safeMaxTokens };
                     }
                 }
+                if (isPlayer2)
+                    payload = Player2LocalApi.PrepareChatPayload(payload);
                 string jsonPayload = JsonConvert.SerializeObject(payload);
                 var profile = GetRuntimeProfile(targetConfig.Provider, model);
                 bool isConnectionTestRequest = texts.Count == 1 && texts[0] == "Connection Test";
@@ -241,101 +232,14 @@ namespace AutoTranslator_Core
                 {
                     if (AutoTranslatorSettings.IsCancellationRequested) return null;
 
-                    var tcs = new TaskCompletionSource<ATC_WebResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var dispatchStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    int requestId = -1;
-                    System.Diagnostics.Stopwatch requestTimer = System.Diagnostics.Stopwatch.StartNew();
-                    AutoTranslatorPerf.BeginApiRequest();
-                    ATC_WebResponse resHolder = null;
-                    try
-                    {
-                        ATC_Dispatcher.RunOnMainThread(() =>
-                        {
-                            if (tcs.Task.IsCompleted)
-                            {
-                                dispatchStarted.TrySetResult(false);
-                                return;
-                            }
-
-                            if (AutoTranslatorSettings.IsCancellationRequested)
-                            {
-                                dispatchStarted.TrySetResult(false);
-                                tcs.TrySetResult(CreateRequestTimeoutResponse(targetConfig.Provider, 0));
-                                return;
-                            }
-
-                            try
-                            {
-                                requestId = ATC_WebRequestEngine.Instance.FireRequest(url, jsonPayload, apiKey, targetConfig.Provider, customTimeout, tcs);
-                                dispatchStarted.TrySetResult(requestId > 0);
-                            }
-                            catch (Exception ex)
-                            {
-                                dispatchStarted.TrySetResult(false);
-                                tcs.TrySetResult(new ATC_WebResponse
-                                {
-                                    IsSuccess = false,
-                                    HttpCode = 0,
-                                    ErrorText = ex.Message,
-                                    ResponseBody = string.Empty
-                                });
-                            }
-                        });
-
-                        int hardTimeoutSeconds = Math.Max(customTimeout + 10, 30);
-                        Task dispatchWait = await Task.WhenAny(dispatchStarted.Task, Task.Delay(TranslationDispatchTimeoutMs));
-                        if (dispatchWait != dispatchStarted.Task)
-                        {
-                            dispatchStarted.TrySetResult(false);
-                            resHolder = CreateRequestDispatchTimeoutResponse(targetConfig.Provider);
-                            tcs.TrySetResult(resHolder);
-                            ATC_Dispatcher.RunOnMainThread(() =>
-                                Verse.Log.Warning($"[AutoTranslationCore] Translation request dispatch timed out before UnityWebRequest started [{targetConfig.Provider}]")
-                            );
-                        }
-                        else if (!await dispatchStarted.Task)
-                        {
-                            if (AutoTranslatorSettings.IsCancellationRequested)
-                            {
-                                tcs.TrySetResult(CreateRequestTimeoutResponse(targetConfig.Provider, 0));
-                                return null;
-                            }
-
-                            if (tcs.Task.IsCompleted)
-                            {
-                                resHolder = await tcs.Task;
-                            }
-                            else
-                            {
-                                return null;
-                            }
-                        }
-                        else
-                        {
-                            bool responseReady = await WaitForTranslationResponseAsync(tcs.Task, hardTimeoutSeconds);
-                            if (responseReady)
-                            {
-                                resHolder = await tcs.Task;
-                            }
-                            else if (AutoTranslatorSettings.IsCancellationRequested)
-                            {
-                                tcs.TrySetResult(CreateRequestTimeoutResponse(targetConfig.Provider, 0));
-                                AbortTranslationRequest(requestId, "Translation request cancelled");
-                                return null;
-                            }
-                            else
-                            {
-                                tcs.TrySetResult(CreateRequestTimeoutResponse(targetConfig.Provider, hardTimeoutSeconds));
-                                AbortTranslationRequest(requestId, "Translation request timed out");
-                                resHolder = CreateRequestTimeoutResponse(targetConfig.Provider, hardTimeoutSeconds);
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        requestTimer.Stop();
-                        AutoTranslatorPerf.EndApiRequest(requestTimer.ElapsedMilliseconds, resHolder != null && resHolder.IsSuccess);
-                    }
+                    ATC_WebResponse resHolder = await SendJsonRequestAttemptAsync(
+                        url,
+                        jsonPayload,
+                        apiKey,
+                        targetConfig.Provider,
+                        customTimeout,
+                        player2GameClientId: isPlayer2 ? targetConfig.Player2GameClientId : null,
+                        usePlayer2Protocol: isPlayer2);
 
                     if (AutoTranslatorSettings.IsCancellationRequested) return null;
                     if (resHolder == null) return null;
@@ -373,9 +277,9 @@ namespace AutoTranslator_Core
                             int jitter = new System.Random().Next(100, 800);
                             int delayMs = baseDelay + jitter;
 
-                            AutoTranslatorSettings.AddLog("⚠️ " + "ATC_Log_AIFormatRetry".Translate(formatRetryCount.ToString()));
+                            AutoTranslatorSettings.AddLog("⚠️ " + AutoTranslatorAPI.TranslateText("ATC_Log_AIFormatRetry", formatRetryCount));
                             ATC_Dispatcher.RunOnMainThread(() =>
-                                Verse.Log.Warning($"[AutoTranslationCore] " + "ATC_Log_AIFormatRetry".Translate(formatRetryCount.ToString()))
+                                Verse.Log.Warning($"[AutoTranslationCore] " + AutoTranslatorAPI.TranslateText("ATC_Log_AIFormatRetry", formatRetryCount))
                             );
 
                             if (!await DelayWithPipelineCancellationAsync(delayMs)) return null;
@@ -399,7 +303,7 @@ namespace AutoTranslator_Core
 
 
                         ATC_Dispatcher.RunOnMainThread(() =>
-                            Verse.Log.Warning($"[AutoTranslationCore] " + "ATC_Log_RetryAttempt".Translate(statusCode.ToString(), (attempt + 1).ToString(), delayMs.ToString()))
+                            Verse.Log.Warning($"[AutoTranslationCore] " + AutoTranslatorAPI.TranslateText("ATC_Log_RetryAttempt", statusCode, attempt + 1, delayMs))
                         );
 
                         if (!await DelayWithPipelineCancellationAsync(delayMs)) return null;
@@ -421,7 +325,7 @@ namespace AutoTranslator_Core
                     }
                     else
                     {
-                        AutoTranslatorSettings.AddErrorLog($"⚠️ [{targetConfig.Provider}] " + "ATC_Error_HttpGeneric".Translate(statusCode.ToString()) + $" ({errText})");
+                        AutoTranslatorSettings.AddErrorLog($"⚠️ [{targetConfig.Provider}] " + AutoTranslatorAPI.TranslateText("ATC_Error_HttpGeneric", statusCode) + $" ({errText})");
                     }
 
 
